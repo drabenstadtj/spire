@@ -28,6 +28,9 @@
  *
  */
 
+/* AB: updated to not consider BN_zero return values. This function
+ * returns void and never fails. Compiler has gotten more strict about not
+ * allowing this use of void */
 
 #include "TC.h"
 
@@ -55,7 +58,7 @@ static int lambda(BIGNUM *answer, int i, int j, int *Set_S, BIGNUM *delta, BIGNU
       if (!BN_sub(temp, temp2, temp3)) return 0;
 
       if (!BN_div(temp2, NULL, answer, temp, ctx)) return 0;
-      if (!BN_zero(answer)) return 0;
+      BN_zero(answer);
       if (!BN_add(answer, answer, temp2)) return 0;
     }
     count++;
@@ -167,8 +170,8 @@ int TC_Combine_Sigs(TC_IND_SIG **ind_sigs, TC_IND *key,  BIGNUM *hM, TC_SIG *sig
 
 
   if (!BN_one(p)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
-  if (!BN_zero(q)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
-  if (!BN_zero(r)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
+  BN_zero(q);
+  BN_zero(r);
   if (!BN_one(s)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
 
   while (!BN_is_zero(b)) {
@@ -325,8 +328,8 @@ int TC_Combine_Sigs_P2(TC_IND *key, BIGNUM *hM, TC_SIG *sig, BIGNUM **wexps, int
   if (!BN_copy(b,key->e)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR)); /* b = e */
 
   if (!BN_one(p)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
-  if (!BN_zero(q)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
-  if (!BN_zero(r)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
+  BN_zero(q);
+  BN_zero(r);
   if (!BN_one(s)) return (ret_error(sig,Set_S, ctx, TC_BN_ARTH_ERROR));
 
   while (!BN_is_zero(b)) {
