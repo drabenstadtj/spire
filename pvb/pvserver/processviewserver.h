@@ -21,7 +21,7 @@
 #ifndef PROCESSVIEWSERVER_H
 #define PROCESSVIEWSERVER_H
 
-const char pvserver_version[] = "4.8.6";
+const char pvserver_version[] = "5.15.2";
 
 // define WIN
 #ifdef _WIN32
@@ -437,7 +437,8 @@ Key_F12 = 0x100003b
 enum QpwLegend      { BottomLegend = 0, TopLegend, LeftLegend, RightLegend};
 enum QwtAxis        { yLeft, yRight, xBottom, xTop, axisCnt };
 enum QwtAutoscale   { pvNone = 0, IncludeRef = 1, Symmetric = 2, Floating = 4, Logarithmic = 8, Inverted = 16 };
-enum ScalePosition  { ScaleLeft, ScaleRight, ScaleTop, ScaleBottom };
+//rlmurx-was-here enum ScalePosition  { ScaleLeft, ScaleRight, ScaleTop, ScaleBottom };
+enum ScalePosition  { ScaleNone, ScaleLeft, ScaleRight, ScaleTop, ScaleBottom };
 enum ThermoPosition { ThermoNone, ThermoLeft, ThermoRight, ThermoTop, ThermoBottom};
 enum KnobSymbol     { KnobLine, KnobDot };
 enum CounterButton  { CounterButton1, CounterButton2, CounterButton3, CounterButtonCnt };
@@ -521,6 +522,7 @@ typedef struct _PARAM_
   int   fhdltmp;                         /* temporary file handle              */
   int   iclientsocket;                   /* 0 <= iclientsockert < MAX_CLIENTS index into clientsocket[] */
   int   is_binary;                       /* 0 for text message 1 otherwise     */
+  int   button;                          /* last clicked button                */
 }PARAM;
 
 #ifndef __VMS
@@ -2229,6 +2231,10 @@ Set a table cell to ComboBox.
 
 example:
 pvSetTableComboBox(p,Table1,2,1,1,"choice1,choice2,choice3");
+
+You can add a # in front of choice in order to make it the selectedChoice.
+example: make choice2 the selectedChoice
+pvSetTableComboBox(p,Table1,2,1,1,"choice1,#choice2,choice3");
 
 Allowed widgets: QTable
 </pre> */
