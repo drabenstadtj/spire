@@ -212,4 +212,13 @@ trip_master_v2/tm_keys
 trip_master/tm_keys
 
 # Note: pvbrowser has its own .gitignore file from the pvbrowser distribution,
-# so it is not included here.
+# but we include a few autogenerate pvbrowser files here that are not covered
+# by that file 
+pvb/fake_qmake/fake_qmake
+pvb/language_bindings/lua/pvapplua/pvapplua
+pvb/language_bindings/lua/pvslua/pvslua
+pvb/pvdevelop/pvdevelop-with-qwt62
+pvb/qwt/designer/moc/qwt_designer_plugin.moc
+pvb/qwt/lib/libqwt.prl
+pvb/rllib/rlfind/rlfind
+pvb/rllib/rlhtml2pdf/rlhtml2pdf
