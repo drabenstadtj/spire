@@ -50,9 +50,14 @@ hmis/pnnl_hmi/pnnl_hmi
 scada_master/gen_keys
 scada_master/scada_master
 
+scada_master/conf_gen_keys
+scada_master/conf_scada_master
+
 prime/bin/client
 prime/bin/gen_keys
 prime/bin/prime
+
+prime/bin/conf_prime
 
 spines/daemon/spines
 spines/testprogs/g_flooder
@@ -183,7 +188,7 @@ OpenPLC_v2/matiec_src/stage1_2/iec_flex.cc
 OpenPLC_v2/matiec_src/stage4/generate_c/stage4.Po
 OpenPLC_v2/core/glueVars.cpp
 OpenPLC_v2/st_optimizer
-OpenPLC_v2/st_optimizer_src
+OpenPLC_v2/st_optimizer_src/st_optimizer
 
 # PVB misc
 pvb/designer/src/moc_pvb_designer_plugin.cpp
