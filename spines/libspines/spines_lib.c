@@ -678,7 +678,7 @@ int  spines_socket(int domain, int type, int protocol,
     while (tot_bytes < sizeof(int32)) {
         if ((ret = send(sk, ((char*)(&endianess_type))+tot_bytes, sizeof(int32)-tot_bytes, 0)) <= 0)
             break;
-	    tot_bytes += ret;
+        tot_bytes += ret;
     }   
     if (tot_bytes != sizeof(int32)) {
         Alarm(PRINT, "spines_socket(1): Can not initiate connection to Spines...\n");
@@ -704,7 +704,7 @@ int  spines_socket(int domain, int type, int protocol,
         close(ctrl_sk);
         if (type == SOCK_DGRAM && connect_flag == UDP_CONNECT)
             close(u_sk);
-	    spines_set_errno(SP_ERROR_DAEMON_COMM_ERR);
+        spines_set_errno(SP_ERROR_DAEMON_COMM_ERR);
 	    return(-1);
     }
 
@@ -712,8 +712,8 @@ int  spines_socket(int domain, int type, int protocol,
     tot_bytes = 0;
     while (tot_bytes < *total_len+sizeof(int32)) {
         if ((ret = send(sk, buf+tot_bytes, *total_len+sizeof(int32)-tot_bytes, 0)) <= 0)
-	    break;
-	    tot_bytes += ret;
+            break;
+        tot_bytes += ret;
     }   
     if (tot_bytes != sizeof(udp_header)+sizeof(int32)+7*sizeof(int32)) {
         Alarm(PRINT, "spines_socket(3): Can not initiate connection to Spines...\n");
@@ -721,7 +721,7 @@ int  spines_socket(int domain, int type, int protocol,
         close(ctrl_sk);
         if (type == SOCK_DGRAM && connect_flag == UDP_CONNECT)
             close(u_sk);
-	    spines_set_errno(SP_ERROR_DAEMON_COMM_ERR);
+        spines_set_errno(SP_ERROR_DAEMON_COMM_ERR);
 	    return(-1);
     }
 
@@ -734,9 +734,9 @@ int  spines_socket(int domain, int type, int protocol,
 	    close(sk);
 	    close(ctrl_sk);
 	    if(type == SOCK_DGRAM && connect_flag == UDP_CONNECT)
-	        close(u_sk);
-	        spines_set_errno(SP_ERROR_DAEMON_COMM_ERR);
-	        return(-1);	    
+            close(u_sk);
+        spines_set_errno(SP_ERROR_DAEMON_COMM_ERR);
+        return(-1);	    
 	}
 	recv_bytes += ret;
     }
@@ -1485,7 +1485,7 @@ int  spines_setsockopt(int s, int  level,  int  optname,
     int32 *total_len;
     int32 *type;
     int sk, ret, response_expected;
-    int client, tcp_sk, udp_sk, my_type;
+    int client, tcp_sk, my_type;
     spines_nettime expiration;
 
     if( optname != SPINES_ADD_MEMBERSHIP &&
@@ -1501,7 +1501,7 @@ int  spines_setsockopt(int s, int  level,  int  optname,
         optname != SPINES_SET_PRIORITY &&
         optname != SPINES_SET_EXPIRATION &&
         optname != SPINES_DISJOINT_PATHS ) {
-	return(-1);
+        return(-1);
     }
 
     stdmutex_grab(&data_mutex); {
@@ -1515,7 +1515,6 @@ int  spines_setsockopt(int s, int  level,  int  optname,
       }
 
       tcp_sk  = all_clients[client].tcp_sk;
-      udp_sk  = all_clients[client].udp_sk;
       my_type = all_clients[client].type;
 
     } stdmutex_drop(&data_mutex);
@@ -2379,7 +2378,7 @@ int spines_flood_send(int sockfd, int address, int port, int rate, int size, int
     int32 *total_len;
     int32 *type;
     int ret;
-    int client, my_type, tcp_sk, sk, connect_flag;
+    int client, sk;
     
     int32 *dest, *dest_port, *send_rate, *pkt_size, *num;
 
@@ -2396,9 +2395,6 @@ int spines_flood_send(int sockfd, int address, int port, int rate, int size, int
 	spines_set_errno(SP_ERROR_INPUT_ERR);
 	return(-1);
       }
-      my_type = all_clients[client].type;
-      tcp_sk = all_clients[client].tcp_sk;
-      connect_flag = all_clients[client].connect_flag;
     } stdmutex_drop(&data_mutex);
 
     sk = sockfd;
@@ -2448,7 +2444,7 @@ int spines_flood_recv(int sockfd, char *filename, int namelen)
     int32 *total_len;
     int32 *type;
     int ret;
-    int client, my_type, tcp_sk, sk, connect_flag;
+    int client, sk;
     int *len;
     char *name;
 
@@ -2465,9 +2461,6 @@ int spines_flood_recv(int sockfd, char *filename, int namelen)
 	spines_set_errno(SP_ERROR_INPUT_ERR);
 	return(-1);
       }
-      my_type = all_clients[client].type;
-      tcp_sk = all_clients[client].tcp_sk;
-      connect_flag = all_clients[client].connect_flag;
     } stdmutex_drop(&data_mutex);
 
     sk = sockfd;
