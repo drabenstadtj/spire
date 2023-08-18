@@ -245,7 +245,7 @@ below to build Spire.
 ### Building for Performance Benchmarks
 
 If you are only conducting performance benchmarks of the core Spire system
-(i.e.\ measuring how long it takes clients to get responses for updates
+(i.e. measuring how long it takes clients to get responses for updates
 submitted to the SCADA Master), you can build only the Spines, Prime, SCADA
 Master, and benchmark program components.
 
