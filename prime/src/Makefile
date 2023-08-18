@@ -119,10 +119,11 @@ clean:
 	rm -f ../bin/gen_keys
 
 # Also cleans up the stdutil, libspread-util, and OpenTC libraries
+# Uses - to ignore errors, since these fail if clean is run multiple times
 cleaner: clean
-	cd ../stdutil; make distclean
-	cd ../libspread-util; make distclean
-	cd ../OpenTC-1.1/TC-lib-1.0/; make distclean
+	-$(MAKE) -C ../stdutil distclean
+	-$(MAKE) -C ../libspread-util distclean
+	-$(MAKE) -C ../OpenTC-1.1/TC-lib-1.0/ distclean
 
 # Also removes all key files
 distclean: cleaner

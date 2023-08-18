@@ -232,6 +232,22 @@ below to build Confidential Spire.
 
         make conf_spire
 
+### Building for Performance Benchmarks
+
+If you are only conducting performance benchmarks of the core Spire system
+(i.e.\ measuring how long it takes clients to get responses for updates
+submitted to the SCADA Master), you can build only the Spines, Prime, SCADA
+Master, and benchmark program components.
+
+For that, you can use the command:
+
+```
+make conf_core
+```
+
+Note that if you are switching from a base Spire configuration, you
+still need to run `make clean` before running `make conf_core`.
+
 ---
 
 ## Generating Keys
