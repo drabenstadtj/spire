@@ -157,6 +157,7 @@ int     Mem_valid_objtype(int32u objtype);
  */
 int32u  Mem_Obj_Type(const void *object);
 
+#ifndef NDEBUG
 extern LOC_INLINE unsigned int Mem_total_bytes(void);
 extern LOC_INLINE unsigned int Mem_total_max_bytes(void);
 extern LOC_INLINE unsigned int Mem_total_inuse(void);
@@ -170,6 +171,7 @@ extern LOC_INLINE unsigned int Mem_obj_in_app(int32u objtype);
 extern LOC_INLINE unsigned int Mem_max_in_app(int32u objtype);
 extern LOC_INLINE unsigned int Mem_obj_total(int32u objtype);    
 extern LOC_INLINE unsigned int Mem_max_obj(int32u objtype);
+#endif /* NDEBUG */
 
 #endif /* MEMORY_H */
 
