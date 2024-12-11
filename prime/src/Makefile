@@ -78,6 +78,8 @@ CM_OBJ=config_manager.o data_structs.o utility.o network.o pre_order.o \
         reliable_broadcast.o view_change.o catchup.o proactive_recovery.o \
         merkle.o recon.o tc_wrapper.o $(WRAPPER_OBJ)
 
+#CM_OBJ=config_manager.o $(WRAPPER_OBJ)
+
 CA_OBJ=config_agent.o data_structs.o utility.o network.o pre_order.o \
         util_dll.o packets.o nm_process.o process.o order.o \
         signature.o net_wrapper.o erasure.o validate.o suspect_leader.o \

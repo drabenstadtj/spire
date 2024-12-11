@@ -55,17 +55,18 @@
 #include <errno.h>
 #include <arpa/inet.h>
 
-#include "spu_alarm.h"
-#include "spu_events.h"
-#include "spu_memory.h"
-#include "spu_data_link.h"
-#include "spines_lib.h"
-
 #include "packets.h"
 #include "openssl_rsa.h"
 #include "net_wrapper.h"
 #include "def.h"
 #include "data_structs.h"
+#include "tc_wrapper.h"
+
+#include "spu_alarm.h"
+#include "spu_events.h"
+#include "spu_memory.h"
+#include "spu_data_link.h"
+#include "spines_lib.h"
 
 #define KEY_PAYLOAD_MAXSIZE 40000 
 
@@ -97,8 +98,8 @@ void repeat_broadcast_configuration_message(int code, void *dummy);
 void test_encrypt_decrypt();
 
 void construct_key_message();
-void read_pub_key(char * filename,int type,int id);
-void read_pvt_key(char * filename,int type,int id);
+void read_pub_key(const char * filename,int type,int id);
+void read_pvt_key(const char * filename,int type,int id);
 
 void generate_keys(int curr_n, int curr_f, int curr_k, char * base_dir)
 {
@@ -166,13 +167,10 @@ void construct_key_message()
 }
 
 
-void read_pub_key(char * filename,int type, int id){
+void read_pub_key(const char * filename, int type, int id){
     FILE *fp;
     int keysize = 0;
-    signed_message *pkt_header;
-    key_msg_header *km_header;
     pub_key_header *pub_header;
-    int ret;
     
     /* Open key file */
     fp=fopen(filename,"r");
@@ -187,11 +185,11 @@ void read_pub_key(char * filename,int type, int id){
     /* Key can't fit in current message we are constructing (it is "full"), so
      * finalize and store the current message */
     if (Curr_Idx+sizeof(pub_key_header)+keysize >= KEY_PAYLOAD_MAXSIZE) {
-    //Full
+        //Full
         Alarm(DEBUG,"One key payload ready*****\n");
         //create new msg and store
         construct_key_message();
-	fflush(stdout);
+        fflush(stdout);
     }
 
     /* Fill in public key header */
@@ -210,7 +208,7 @@ void read_pub_key(char * filename,int type, int id){
     Alarm(PRINT,"after pubkey Curr_Idx=%d, header=%d, keysize=%d\n",Curr_Idx,sizeof(pub_key_header),keysize);
 }
 
-void read_pvt_key(char * filename,int type, int id){
+void read_pvt_key(const char * filename,int type, int id){
     FILE *fp;
     char enc_key_filename[250];
     int keysize,enc_key_size,key_parts,ret,rem_data_len = 0;
@@ -409,14 +407,11 @@ void new_broadcast_configuration_message(int code, void *dummy)
 {
     nm_message *conf_msg;
     char filename[200];
-    int ret,i;
     FILE * fp;
     char * line = NULL;
     size_t len = 0;
     ssize_t read;
     char seps[]   = " ";
-    char *token;
-    char *prev_token;
     char *param;
     char *value;
     sp_time now;
