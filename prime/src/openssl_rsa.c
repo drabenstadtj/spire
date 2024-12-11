@@ -361,12 +361,11 @@ void OPENSSL_RSA_Generate_Keys_with_args(int count,const char *keys_dir) {
     rt = RSA_TYPE_NM_PRIVATE;
   } else if(type== RSA_CONFIG_MNGR){
       rt = RSA_TYPE_NM_PRIVATE;
-      printf("RSA_TYPE_CONFIG_MNGR_PRIVATE\n");
+      Alarm(DEBUG, "RSA_TYPE_CONFIG_MNGR_PRIVATE\n");
   } else if(type== RSA_CONFIG_AGENT){
     return;
   } else {
-    printf("OPENSSL_RSA_Read_Keys: Called with invalid type.\n");
-    exit(0);
+    Alarm(EXIT, "OPENSSL_RSA_Read_Keys: Called with invalid type.\n");
   }
 
   /* Read my private key. */
@@ -439,10 +438,9 @@ void OPENSSL_RSA_Make_Digest( const void *buffer, size_t buffer_size,
      * be DIGEST_SIZE bytes, which is 20 */
    
     if ( md_len != DIGEST_SIZE ) {
-	printf("An error occurred while generating a message digest.\n"
+        Alarm(EXIT, "An error occurred while generating a message digest.\n"
 		"The length of the digest was set to %d. It should be %d.\n"
 		, md_len, DIGEST_SIZE);
-	exit(0);
     }
 
     end = E_get_time();
@@ -482,8 +480,7 @@ void OPENSSL_RSA_Make_Signature( const byte *digest_value, byte *signature )
   /*int32u rsa_size;*/ 
   
   if(private_rsa == NULL) {
-    printf("Error: In Make_Signature, private_rsa key is NULL.\n");
-    exit(0);
+    Alarm(EXIT, "Error: In Make_Signature, private_rsa key is NULL.\n");
   }
 
   /*RSA_print_fp( stdout, private_rsa, 4 );*/
@@ -546,9 +543,8 @@ int32u OPENSSL_RSA_Verify_Signature( const byte *digest_value,
     
 #if 1 
     if ( !ret ) {
-	printf("RSA_OPENSSL_Verify: Verification Failed. "
-		"Machine number = %d. \n",
-		number);
+        Alarm(PRINT, "RSA_OPENSSL_Verify: Verification Failed. "
+		      "Machine number = %d. \n", number);
     }
 #endif
 
@@ -603,21 +599,19 @@ int OPENSSL_RSA_Verify( const unsigned char *message, size_t message_length,
 
 int OPENSSL_RSA_Get_KeySize(unsigned char *pubKeyFile){
 
-   FILE *f=fopen(pubKeyFile,"r");
-   if (!f){
-        printf("Error opening file\n");
-        exit(1);
-   }
-
-   RSA *pubkey=RSA_new();
-   pubkey = PEM_read_RSA_PUBKEY(f, &pubkey, NULL, NULL);
-    if(!pubkey){
-        printf("OPENSSL_RSA: Error reading pub key\n");
-        fclose(f);
-        exit(1);
+    FILE *f=fopen(pubKeyFile,"r");
+    if (!f){
+        Alarm(EXIT, "Error opening file %s\n", pubKeyFile);
     }
-   fclose(f);
-   return RSA_size(pubkey);
+
+    RSA *pubkey=RSA_new();
+    pubkey = PEM_read_RSA_PUBKEY(f, &pubkey, NULL, NULL);
+    if(!pubkey){
+        fclose(f);
+        Alarm(EXIT, "OPENSSL_RSA: Error reading pub key\n");
+    }
+    fclose(f);
+    return RSA_size(pubkey);
 }
 
 int OPENSSL_RSA_Encrypt(unsigned char *pubKeyFile,unsigned char *data, int data_len, unsigned char * encrypted_data){
@@ -626,7 +620,7 @@ int OPENSSL_RSA_Encrypt(unsigned char *pubKeyFile,unsigned char *data, int data_
 
   FILE *f=fopen(pubKeyFile,"r");
    if (!f){
-        printf("Error opening file\n");
+        printf("Error opening file %s\n", pubKeyFile);
         exit(1);
    }
 
@@ -658,7 +652,7 @@ void OPENSSL_RSA_Decrypt(unsigned char *pvtKeyFile,unsigned char *data, int data
 
    FILE *f=fopen(pvtKeyFile,"r");
    if (!f){
-        printf("Error opening file\n");
+        printf("Error opening file %s\n", pvtKeyFile);
         exit(1);
    }
    RSA *pvtkey=RSA_new();
