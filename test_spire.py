@@ -50,12 +50,13 @@ def get_args(argv):
     parser_relaunch.set_defaults(func=relaunch_server)
 
     parser_client = subparsers.add_parser('benchmark', description='Start benchmark client')
+    parser_client.add_argument('n', type=int, help='number of benchmark instances to launch')
     parser_client.set_defaults(func=benchmark)
 
     return parser.parse_args()
 
-def benchmark():
-    cmd_str = "docker exec {container} cd benchmark; ./benchmark 0 {ip}:{spines_ext_port}  1000000 500 >outputfirst11.txt  2>&1 &".format(container=CLIENT_NAME, ip=CLIENT_IP, spines_ext_port=8120)
+def benchmark(args):
+    cmd_str = "docker exec {container} python run_benchmark.py -n {num}".format(container=CLIENT_NAME, num=args.n)
     print(cmd_str)
     subprocess.run(cmd_str, shell=True)
     #cmd_str = "docker exec {} cd benchmark; ./benchmark id 192.168.101.108:8120  1000000 500 >outputsecond11.txt  2>&1 &".format('HMI')
