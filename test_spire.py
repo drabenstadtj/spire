@@ -91,7 +91,7 @@ def init_containers():
         subprocess.Popen(cmd_str, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # start client container
-    cmd_str = "docker run --cap-add=NET_ADMIN --name {serv} --network {net} --ip {ip} {img}".format(serv=CLIENT_NAME, net=NETWORK_NAME, img=IMAGE_NAME, ip=CLIENT_IP)
+    cmd_str = "docker run --cap-add=NET_ADMIN --name {serv} --network {net} --ip {ip} {img} {cmd}".format(serv=CLIENT_NAME, net=NETWORK_NAME, img=IMAGE_NAME, ip=CLIENT_IP, cmd="python run_client.py")
     print(cmd_str)
     subprocess.Popen(cmd_str, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
