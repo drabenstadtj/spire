@@ -8,6 +8,9 @@ RUN dnf install -y dnf-plugins-core
 RUN dnf config-manager --set-enabled crb
 RUN dnf install -y openssl-devel flex byacc qt5-devel cmake python
 
+# Install debugging tools
+RUN dnf install -y gdb valgrind
+
 # Copy files
 COPY . /app/spire
 WORKDIR /app/spire
