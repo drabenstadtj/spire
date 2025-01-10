@@ -17,6 +17,48 @@ For more information, see [www.dsn.jhu.edu/spire/ ](https://www.dsn.jhu.edu/spir
 
 ---
 
+## Docker Setup for Fault Injection Testing
+
+### Build the Docker image using the provided Dockerfile:
+```
+docker build -t spire-img .
+```
+
+### Setup a (virtual) network of 4 replicas (each in a separate container) and 1 client container:
+```
+python test_spire.py init
+```
+Initializing the system via the `test_spire.py` script creates the replica
+containers (`spire1`, `spire2`, ...) and client container (`spire-client`). It
+runs the script `run_replica.py` in each replica container and the script
+`run_client.py` in the client container.
+
+Note that for debugging, you may find it useful to launch additional terminal
+instances for a given container. As an example, you can launch an interactive
+bash terminal on container `spire1` with:
+```
+docker exec -it spire1 bash
+```
+
+The `run_replica.py` script normally starts up all the replica components
+(Spines, SCADA Master, and Prime). For debugging, you may find it useful to
+comment out the line to start a program of interest (e.g. Prime) and then open
+a bash terminal and manally launch that process in a debugging tool.
+
+### Start benchmark clients that introduce updates into the system:
+```
+python test_spire.py benchmark 2
+```
+The above command launches 2 benchmark clients (in the same container). You can
+change the last parameter to specify the number of clients to run.
+
+### Remove all containers and virtual network
+```
+python test_spire.py rm
+```
+
+---
+
 ## 1. Power Grid Control Systems Architecture:
 
 Power grid SCADA consists of two levels: a control center level and a
