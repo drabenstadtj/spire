@@ -43,7 +43,7 @@ docker exec -it spire1 bash
 The `run_replica.py` script normally starts up all the replica components
 (Spines, SCADA Master, and Prime). For debugging, you may find it useful to
 comment out the line to start a program of interest (e.g. Prime) and then open
-a bash terminal and manally launch that process in a debugging tool.
+a bash terminal and manually launch that process in a debugging tool.
 
 ### Start benchmark clients that introduce updates into the system:
 ```
