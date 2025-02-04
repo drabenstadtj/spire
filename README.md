@@ -20,7 +20,7 @@ For more information, see [www.dsn.jhu.edu/spire/ ](https://www.dsn.jhu.edu/spir
 
 # Docker Setup
 
-First, if you already have generated keys, place them in `prebuilt_keys/prime`, `prebuilt_keys/scada`, ` prebuilt_keys/spines` respectively.
+First, if you already have generated keys, place them in `prebuilt_keys/prime`, `prebuilt_keys/scada`, `prebuilt_keys/spines` respectively.
 
 Build to container with the Dockerfile. During the build process a script runs that will check if there are pregenerated keys and copy them to the proper locations. If there are not pregenerated keys it will go through the process of generating them like normal.
 
