@@ -10,7 +10,7 @@ def main(argv):
 
     #i = args.id
     # Output to file
-    spines_ext_f = open("out_spines_ext_{}.txt".format("client"), 'a')
+    # spines_ext_f = open("out_spines_ext_{}.txt".format("client"), 'a')
 
     # Output to docker logs
     spines_ext_f = sys.stdout
