@@ -5,11 +5,12 @@ For more information, see [www.dsn.jhu.edu/spire/ ](https://www.dsn.jhu.edu/spir
 ---
 
 ## Contents:
+
 1. Power Grid Control Systems Architecture
 2. Spire Components Overview
-    1. Spire
-    2. Confidential Spire
-    3. Spire for the Substation
+   1. Spire
+   2. Confidential Spire
+   3. Spire for the Substation
 3. Prerequisites Overview
 4. Component Specific READMEs
 5. Version Notes
@@ -17,16 +18,36 @@ For more information, see [www.dsn.jhu.edu/spire/ ](https://www.dsn.jhu.edu/spir
 
 ---
 
+# Docker Setup
+
+First, if you already have generated keys, place them in `prebuilt_keys/prime`, `prebuilt_keys/scada`, ` prebuilt_keys/spines` respectively.
+
+Build to container with the Dockerfile. During the build process a script runs that will check if there are pregenerated keys and copy them to the proper locations. If there are not pregenerated keys it will go through the process of generating them like normal.
+
+```
+docker build -t spire-img .
+```
+
+Then, run the docker-compose.yml which configures the network, ip addresses for containers, and runs either the `run_client.py` or `run_replica.py` scripts on container start.
+
+```
+docker compose up -d
+```
+
+I've configured the `run_client.py` and `run_replica.py` to output to stdout, thus the logs are viewable using docker logs.
+
+---
+
 ## 1. Power Grid Control Systems Architecture:
 
 Power grid SCADA consists of two levels: a control center level and a
-substation level. 
+substation level.
 
 The control-center SCADA monitors and controls many substations and Remote
 Terminal Units (RTUs) and/or Programmable Logic Controllers (PLCs). The
 control-center-level operations typically have a latency requirement of
 100ms-200ms. The substation-level critical protection operations have latency
-requirements as low as a quarter-power cycle (For 60Hz, this is 4.167ms). 
+requirements as low as a quarter-power cycle (For 60Hz, this is 4.167ms).
 
 We have developed Spire as a toolkit that contains modules to support
 intrusion-tolerance for power grid control systems at both the control-center
@@ -41,12 +62,12 @@ intrusion-tolerant SCADA at the control-center level, and **Spire for the
 Substation** at the substation level.
 
 ### Spire
-        
+
 Spire is an intrusion-tolerant SCADA system for the power grid. Spire is
 designed to withstand attacks and compromises at both the system level and the
 network level, while meeting the timeliness requirements of power grid
-monitoring and control systems (on the order of 100-200ms update latency).  
-        
+monitoring and control systems (on the order of 100-200ms update latency).
+
 The Spire system includes a SCADA Master and PLC/RTU proxy designed from
 scratch to support intrusion tolerance, as well as several example HMIs based
 on [pvbrowser](https://pvbrowser.de/pvbrowser/index.php). The SCADA Master is
@@ -67,14 +88,14 @@ and data center but at least one control center remains up, the system can be
 reconfigured to that one control center (configuration '6') and resume
 operations. It is also possible to reconfigure preemptively when needed (e.g.
 if one control center becomes non-operational, it is better to reconfigure the
-system to configuration '6' in the remaining control center).  The
+system to configuration '6' in the remaining control center). The
 reconfiguration modules are implemented as part of the Prime replication
 engine, and include a configuration network, configuration manager and
 configuration agent. The details of the reconfiguration mechanism are in
 `README_Spire.md` and README of Prime.
 
 ### Confidential Spire
-        
+
 Confidential Spire is an intrusion-tolerant SCADA system that provides the same
 resilience guarantees as the base Spire. However, Confidential Spire enables
 system operators to maintain strong confidentiality guarantees for potentially
@@ -91,7 +112,7 @@ confidentiality). The main change is that Spire's SCADA master is replaced by
 the Confidential SCADA Master, which additionally performs the needed
 encryption/decryption of requests and state, along with generating threshold
 signatures on encrypted contents to prove their validity to data center
-replicas. 
+replicas.
 
 ### Spire for the Substation
 
@@ -110,13 +131,13 @@ protocol of IEC61850 using open-source libiec61850.
 
 ## 3. Prerequisites Overview
 
-We briefly provide an overview of installation prerequisites. 
+We briefly provide an overview of installation prerequisites.
 
 - OpenSSL development Package
 - Lex and Yacc
 
-
 Spire and Confidential Spire Specific:
+
 - QT development package and webkit (for HMI modules)
 - pvbrowser (for HMI modules,included into Spire)
 - cmake (for Opendnp3)
@@ -125,6 +146,7 @@ Spire and Confidential Spire Specific:
 - OpenPLC (for emulated PLCs,included into Spire)
 
 Spire for the Substation Specific:
+
 - libiec61850 (for IEC61850 support,included into Spire)
 
 The commands to install these packages are in the component specific readme
@@ -147,7 +169,7 @@ Spire's top-level directory.
 Spire File: `README_Spire.md`
 Confidential Spire: `README_Confidential_Spire.md`
 Spire for the Substation: `README_Spire_Substation.md`
- 
+
 ---
 
 ## 5. Version Notes
@@ -171,7 +193,7 @@ Confidentiality in Partially Cloud-Based BFT Systems" published at [IEEE DSN
 Spire 1.3 updates Spire 1.2 to use OpenSSL 1.1.0. Additionally, an Machine
 Learning-based Network Intrusion Detection Module is added to Spire.
 
-Spire 1.2  updates Spire 1.1 to use Spines 5.4, fixing a bug in Spines that
+Spire 1.2 updates Spire 1.1 to use Spines 5.4, fixing a bug in Spines that
 could affect Spire in certain configurations. The Spire 1.1 release consists of
 the version of the Spire code that was used in a test deployment with the
 Hawaiian Electric Company from January 22 to February 1, 2018. This version of
