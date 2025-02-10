@@ -22,6 +22,5 @@ RUN cd example_conf; ./install_conf.sh conf_4
 RUN make core
 
 # Run the script to check and generate keys if needed
-RUN python3 /app/spire/check_keys.py
+ENTRYPOINT ["python", "/app/spire/run_spire.py"]
 
-#ENTRYPOINT /bin/bash

@@ -20,21 +20,59 @@ For more information, see [www.dsn.jhu.edu/spire/ ](https://www.dsn.jhu.edu/spir
 
 # Docker Setup
 
-First, if you already have generated keys, place them in `prebuilt_keys/prime`, `prebuilt_keys/scada`, `prebuilt_keys/spines` respectively.
+## **Environment Variables**
 
-Build to container with the Dockerfile. During the build process a script runs that will check if there are pregenerated keys and copy them to the proper locations. If there are not pregenerated keys it will go through the process of generating them like normal.
+The script determines the container's role based on these environment variables:
 
+| Variable        | Required          | Description                                         |
+| --------------- | ----------------- | --------------------------------------------------- |
+| `SPIRE_ROLE`    | Yes               | The role of the container.                          |
+| `SPIRE_ID`      | Only for replicas | The ID of the replica.                              |
+| `SPIRE_NETWORK` | No                | Base network IP for Spire (default: `192.168.101`). |
+
+---
+
+#### **Example Replica `docker-compose.yml` Configuration:**
+
+```yaml
+spire1:
+  image: spire-img
+  container_name: spire1
+  networks:
+    spire-net:
+      ipv4_address: 192.168.101.101
+  environment:
+    - SPIRE_ROLE=replica
+    - SPIRE_ID=1
 ```
-docker build -t spire-img .
+
+#### **Example Client `docker-compose.yml` Configuration:**
+
+```yaml
+client:
+  image: spire-img
+  container_name: spire-client
+  networks:
+    spire-net:
+      ipv4_address: 192.168.101.107
+  environment:
+    - SPIRE_ROLE=client
 ```
 
-Then, run the docker-compose.yml which configures the network, ip addresses for containers, and runs either the `run_client.py` or `run_replica.py` scripts on container start.
+---
 
-```
-docker compose up -d
-```
+## **Entrypoint Script**
 
-I've configured the `run_client.py` and `run_replica.py` to output to stdout, thus the logs are viewable using docker logs.
+1. **Check and Restore Keys**:
+
+   - If keys exist in `/app/spire/pregenerated_keys`, copy them to their expected locations.
+   - If keys are missing, generate new ones.
+
+2. **Start the Correct Process**:
+   - If `SPIRE_ROLE=replica`, run `python run_replica.py -id $SPIRE_ID`.
+   - If `SPIRE_ROLE=client`, run `python run_client.py`.
+
+- If you need to regenerate keys, delete the old ones from `/app/spire/pregenerated_keys` and restart the container.
 
 ---
 
