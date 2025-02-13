@@ -526,6 +526,7 @@ void new_broadcast_configuration_message(int code, void *dummy)
      *     Machine_Name
      *     Spines External IP
      *     Spines Internal IP
+     *     SCADA Master IP
      *     Prime IP
      *     DC_CC_Flag :  1 == control center (CC), 0 == data center (DC)
      */
