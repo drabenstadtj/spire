@@ -24,11 +24,10 @@ For more information, see [www.dsn.jhu.edu/spire/ ](https://www.dsn.jhu.edu/spir
 
 The script determines the container's role based on these environment variables:
 
-| Variable        | Required          | Description                                         |
-| --------------- | ----------------- | --------------------------------------------------- |
-| `SPIRE_ROLE`    | Yes               | The role of the container.                          |
-| `SPIRE_ID`      | Only for replicas | The ID of the replica.                              |
-| `SPIRE_NETWORK` | No                | Base network IP for Spire (default: `192.168.101`). |
+| Variable     | Required          | Description                |
+| ------------ | ----------------- | -------------------------- |
+| `SPIRE_ROLE` | Yes               | The role of the container. |
+| `SPIRE_ID`   | Only for replicas | The ID of the replica.     |
 
 ---
 
