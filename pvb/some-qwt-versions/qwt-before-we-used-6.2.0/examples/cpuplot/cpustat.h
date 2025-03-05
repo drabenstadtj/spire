@@ -1,21 +1,11 @@
-/*****************************************************************************
- * Qwt Examples - Copyright (C) 2002 Uwe Rathmann
- * This file may be used under the terms of the 3-clause BSD License
- *****************************************************************************/
+#include <qdatetime.h>
 
-#pragma once
-
-#include <QTime>
-
-class CpuStat
+class CpuStat 
 {
-  public:
+public:
     CpuStat();
-
-    void statistic( double& user, double& system );
+    void statistic(double &user, double &system);
     QTime upTime() const;
-
-  private:
 
     enum Value
     {
@@ -27,7 +17,7 @@ class CpuStat
         NValues
     };
 
-    void lookUp( double[NValues] ) const;
-
-    double m_procValues[NValues];
+private:
+    void lookUp(double[NValues]) const;
+    double procValues[NValues];
 };
