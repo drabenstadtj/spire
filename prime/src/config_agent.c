@@ -305,6 +305,19 @@ void write_to_file(int32u key_type, int32u key_id,int32u key_size,char *currkey)
 
 int main(int argc, char **argv)
 {
+/*
+ * Config Agent needs to:
+ * - knows config generator public key (can read from file on startup)
+ * - collects fragments to construct full configuration message (we don't need to sign/verify individual fragments because spines handles this)
+ * - once all fragments are received, parses configuration
+ * - based on configuration:
+ *      - If I have spines internal or external daemon:
+ *          - generates spines config (could also be done at generation level and just received here)
+ *          - restarts spines daemon (passing new config file name with -c parameter)
+ *      - If I have a replica:
+ *          - signals scada master and prime to reset
+ */
+
     setlinebuf(stdout);
     Alarm_set_types(PRINT);
     //Alarm_set_types(STATUS|DEBUG);
