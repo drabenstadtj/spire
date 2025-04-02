@@ -10,14 +10,31 @@
 #include <string.h>
 #include <stdlib.h>
 
+
+
+
 /* ---------- Internal Helpers ---------- */
 
-static char* write_key_to_pem(EVP_PKEY* pkey, int is_public, const char* passphrase)
+char *hex_encode(const unsigned char *data, size_t len)
+{
+    char *hex = malloc(len * 2 + 1);
+    if (!hex)
+        return NULL;
+
+    for (size_t i = 0; i < len; ++i)
+    {
+        sprintf(hex + i * 2, "%02x", data[i]);
+    }
+    hex[len * 2] = '\0';
+    return hex;
+}
+
+static char *write_key_to_pem(EVP_PKEY *pkey, int is_public, const char *passphrase)
 {
     if (!pkey)
         return NULL;
 
-    BIO* bio = BIO_new(BIO_s_mem());
+    BIO *bio = BIO_new(BIO_s_mem());
     if (!bio)
         return NULL;
 
@@ -29,7 +46,7 @@ static char* write_key_to_pem(EVP_PKEY* pkey, int is_public, const char* passphr
     else if (passphrase)
     {
         success = PEM_write_bio_PrivateKey(bio, pkey, EVP_aes_256_cbc(),
-            (unsigned char*)passphrase, strlen(passphrase), NULL, NULL);
+                                           (unsigned char *)passphrase, strlen(passphrase), NULL, NULL);
     }
     else
     {
@@ -43,7 +60,7 @@ static char* write_key_to_pem(EVP_PKEY* pkey, int is_public, const char* passphr
     }
 
     size_t len = BIO_pending(bio);
-    char* pem = malloc(len + 1);
+    char *pem = malloc(len + 1);
     if (!pem)
     {
         BIO_free(bio);
@@ -59,10 +76,10 @@ static char* write_key_to_pem(EVP_PKEY* pkey, int is_public, const char* passphr
 /* ---------- Key Generation ---------- */
 
 // Generate an RSA key using EVP API
-EVP_PKEY* generate_rsa_key(int bits)
+EVP_PKEY *generate_rsa_key(int bits)
 {
-    EVP_PKEY* pkey = NULL;
-    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL); // Creates a context for rsa keygen
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL); // Creates a context for rsa keygen
 
     if (!ctx)
     {
@@ -90,47 +107,36 @@ EVP_PKEY* generate_rsa_key(int bits)
     return pkey;            // Return the generated key
 }
 
-char* generate_and_get_public_key(int bits)
+char *generate_and_get_public_key(int bits)
 {
-    EVP_PKEY* key = generate_rsa_key(bits);
+    EVP_PKEY *key = generate_rsa_key(bits);
     if (!key)
         return NULL;
 
-    char* pem = get_public_key(key);
-    free_rsa_key(key);
-    return pem;
-}
-
-char* generate_and_get_encrypted_private_key(int bits, const char* passphrase)
-{
-    EVP_PKEY* key = generate_rsa_key(bits);
-    if (!key)
-        return NULL;
-
-    char* pem = get_encrypted_private_key(key, passphrase);
+    char *pem = get_public_key(key);
     free_rsa_key(key);
     return pem;
 }
 
 /* ---------- Key Serialization ---------- */
 
-char* get_public_key(EVP_PKEY* pkey)
+char *get_public_key(EVP_PKEY *pkey)
 {
     return write_key_to_pem(pkey, 1, NULL);
 }
 
-char* get_private_key(EVP_PKEY* pkey)
+char *get_private_key(EVP_PKEY *pkey)
 {
     return write_key_to_pem(pkey, 0, NULL);
 }
 
-char* get_encrypted_private_key(EVP_PKEY* pkey, const char* passphrase)
+char *get_encrypted_private_key(EVP_PKEY *pkey, const char *passphrase)
 {
     return write_key_to_pem(pkey, 0, passphrase);
 }
 
 // Free EVP_PKEY structure
-void free_rsa_key(EVP_PKEY* pkey)
+void free_rsa_key(EVP_PKEY *pkey)
 {
     if (pkey)
     {
@@ -139,7 +145,7 @@ void free_rsa_key(EVP_PKEY* pkey)
 }
 
 // Write a key to a file
-int write_key_to_file(const char* filename, const char* key)
+int write_key_to_file(const char *filename, const char *key)
 {
     if (!filename || !key)
     {
@@ -147,7 +153,7 @@ int write_key_to_file(const char* filename, const char* key)
         return -1;
     }
 
-    FILE* file = fopen(filename, "w");
+    FILE *file = fopen(filename, "w");
     if (!file)
     {
         perror("Error opening file for writing");
@@ -167,14 +173,14 @@ int write_key_to_file(const char* filename, const char* key)
 
 /* ---------- Signing / Verifying ---------- */
 
-Signature sign_buffer(const unsigned char* data, size_t data_len, EVP_PKEY* priv_key)
+Signature sign_buffer(const unsigned char *data, size_t data_len, EVP_PKEY *priv_key)
 {
-    Signature result = { NULL, 0 };
+    Signature result = {NULL, 0};
 
     if (!data || !priv_key)
         return result;
 
-    EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
+    EVP_MD_CTX *md_ctx = EVP_MD_CTX_new();
     if (!md_ctx)
     {
         perror("EVP_MD_CTX_new failed");
@@ -209,14 +215,14 @@ Signature sign_buffer(const unsigned char* data, size_t data_len, EVP_PKEY* priv
     return result;
 }
 
-int verify_buffer(const unsigned char* data, size_t data_len,
-    const unsigned char* signature, size_t sig_len,
-    EVP_PKEY* pub_key)
+int verify_buffer(const unsigned char *data, size_t data_len,
+                  const unsigned char *signature, size_t sig_len,
+                  EVP_PKEY *pub_key)
 {
     if (!data || !signature || !pub_key)
         return 1;
 
-    EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
+    EVP_MD_CTX *md_ctx = EVP_MD_CTX_new();
     if (!md_ctx)
     {
         perror("EVP_MD_CTX_new failed");
@@ -241,7 +247,7 @@ int verify_buffer(const unsigned char* data, size_t data_len,
 }
 
 // Free allocated memory for signature
-void free_signature(Signature* sig)
+void free_signature(Signature *sig)
 {
     if (sig && sig->signature)
     {
@@ -253,10 +259,10 @@ void free_signature(Signature* sig)
 
 /* --- Symmetric Encryption --- */
 
-// Generate a random AES key
-unsigned char* generate_symmetric_key()
+// Generate a random 256-bit AES key
+unsigned char *generate_symmetric_key()
 {
-    unsigned char* key = malloc(AES_KEYLEN);
+    unsigned char *key = malloc(AES_KEYLEN);
     if (!key || RAND_bytes(key, AES_KEYLEN) != 1)
     {
         free(key);
@@ -265,54 +271,90 @@ unsigned char* generate_symmetric_key()
     return key;
 }
 
-char* aes_ecb_encrypt_hex(const char* plaintext, const unsigned char* key)
+// AES-256-ECB encryption
+unsigned char *aes_encrypt_ecb(const unsigned char *plaintext, size_t plaintext_len,
+                               const unsigned char *key, size_t *out_len)
 {
-	if (!plaintext || !key) return NULL;
-
-	int pt_len = strlen(plaintext);
-	int block_size = 16;
-	int max_len = pt_len + block_size;
-
-	unsigned char* ciphertext = malloc(max_len);
-	if (!ciphertext) return NULL;
-
-	EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-	int len = 0, ciphertext_len = 0;
-
-	EVP_EncryptInit_ex(ctx, EVP_aes_256_ecb(), NULL, key, NULL);
-	EVP_CIPHER_CTX_set_padding(ctx, 1); // Enable PKCS#7 padding
-
-	EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char*)plaintext, pt_len);
-	ciphertext_len = len;
-
-	EVP_EncryptFinal_ex(ctx, ciphertext + len, &len);
-	ciphertext_len += len;
-
-	EVP_CIPHER_CTX_free(ctx);
-
-	char* hex = malloc(ciphertext_len * 2 + 1);
-	if (!hex) {
-		free(ciphertext);
-		return NULL;
-	}
-
-	for (int i = 0; i < ciphertext_len; ++i)
-		sprintf(&hex[i * 2], "%02x", ciphertext[i]);
-
-	hex[ciphertext_len * 2] = '\0';
-	free(ciphertext);
-	return hex;
-}
-
-
-// Encrypt a symmetric key using a provided EVP_PKEY public key
-unsigned char* encrypt_symmetric_key_with_rsa(const unsigned char* sym_key, size_t sym_key_len,
-    EVP_PKEY* pubkey, size_t* out_len)
-{
-    if (!sym_key || !pubkey || !out_len)
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
         return NULL;
 
-    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pubkey, NULL);
+    size_t padded_len = ((plaintext_len + AES_BLOCK_SIZE) / AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
+    unsigned char *ciphertext = malloc(padded_len);
+    if (!ciphertext)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return NULL;
+    }
+
+    int len = 0, total_len = 0;
+
+    if (!EVP_EncryptInit_ex(ctx, EVP_aes_256_ecb(), NULL, key, NULL))
+        goto error;
+
+    EVP_CIPHER_CTX_set_padding(ctx, 1);
+
+    if (!EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len))
+        goto error;
+    total_len += len;
+
+    if (!EVP_EncryptFinal_ex(ctx, ciphertext + total_len, &len))
+        goto error;
+    total_len += len;
+
+    *out_len = total_len;
+    EVP_CIPHER_CTX_free(ctx);
+    return ciphertext;
+
+error:
+    EVP_CIPHER_CTX_free(ctx);
+    free(ciphertext);
+    return NULL;
+}
+
+// AES-256-ECB decryption
+unsigned char *aes_decrypt_ecb(const unsigned char *ciphertext, size_t ciphertext_len,
+                               const unsigned char *key, size_t *out_len)
+{
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+        return NULL;
+
+    unsigned char *plaintext = malloc(ciphertext_len);
+    if (!plaintext)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return NULL;
+    }
+
+    int len = 0, total_len = 0;
+    if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_ecb(), NULL, key, NULL))
+        goto error;
+
+    EVP_CIPHER_CTX_set_padding(ctx, 1);
+
+    if (!EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len))
+        goto error;
+    total_len = len;
+
+    if (!EVP_DecryptFinal_ex(ctx, plaintext + len, &len))
+        goto error;
+    total_len += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+    *out_len = total_len;
+    return plaintext;
+
+error:
+    EVP_CIPHER_CTX_free(ctx);
+    free(plaintext);
+    return NULL;
+}
+
+// RSA encrypt the AES key
+unsigned char *rsa_encrypt(const unsigned char *data, size_t data_len, EVP_PKEY *pubkey, size_t *out_len)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pubkey, NULL);
     if (!ctx)
         return NULL;
 
@@ -323,43 +365,223 @@ unsigned char* encrypt_symmetric_key_with_rsa(const unsigned char* sym_key, size
         return NULL;
     }
 
-    if (EVP_PKEY_encrypt(ctx, NULL, out_len, sym_key, sym_key_len) <= 0)
+    if (EVP_PKEY_encrypt(ctx, NULL, out_len, data, data_len) <= 0)
     {
         EVP_PKEY_CTX_free(ctx);
         return NULL;
     }
 
-    unsigned char* encrypted = malloc(*out_len);
-    if (!encrypted)
+    unsigned char *out = malloc(*out_len);
+    if (!out)
     {
         EVP_PKEY_CTX_free(ctx);
         return NULL;
     }
 
-    if (EVP_PKEY_encrypt(ctx, encrypted, out_len, sym_key, sym_key_len) <= 0)
+    if (EVP_PKEY_encrypt(ctx, out, out_len, data, data_len) <= 0)
     {
-        free(encrypted);
-        encrypted = NULL;
+        free(out);
+        EVP_PKEY_CTX_free(ctx);
+        return NULL;
     }
 
     EVP_PKEY_CTX_free(ctx);
-    return encrypted;
+    return out;
+}
+
+// RSA decrypt using private key
+unsigned char *rsa_decrypt(const unsigned char *ciphertext, size_t ct_len,
+                           EVP_PKEY *private_key, size_t *out_len)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(private_key, NULL);
+    if (!ctx)
+        return NULL;
+
+    if (EVP_PKEY_decrypt_init(ctx) <= 0 ||
+        EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0)
+    {
+        EVP_PKEY_CTX_free(ctx);
+        return NULL;
+    }
+
+    if (EVP_PKEY_decrypt(ctx, NULL, out_len, ciphertext, ct_len) <= 0)
+    {
+        EVP_PKEY_CTX_free(ctx);
+        return NULL;
+    }
+
+    unsigned char *plaintext = malloc(*out_len);
+    if (!plaintext)
+    {
+        EVP_PKEY_CTX_free(ctx);
+        return NULL;
+    }
+
+    if (EVP_PKEY_decrypt(ctx, plaintext, out_len, ciphertext, ct_len) <= 0)
+    {
+        free(plaintext);
+        EVP_PKEY_CTX_free(ctx);
+        return NULL;
+    }
+
+    EVP_PKEY_CTX_free(ctx);
+    return plaintext;
+}
+
+// Hex decode function
+unsigned char *hex_decode(const char *hexstr, size_t *out_len)
+{
+    if (!hexstr || strlen(hexstr) % 2 != 0)
+        return NULL;
+
+    size_t len = strlen(hexstr) / 2;
+    unsigned char *out = malloc(len);
+    if (!out)
+        return NULL;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        sscanf(hexstr + 2 * i, "%2hhx", &out[i]);
+    }
+
+    *out_len = len;
+    return out;
+}
+
+// Hybrid encryption function
+struct HybridEncrypted hybrid_encrypt(const unsigned char *data, size_t data_len, EVP_PKEY *rsa_pubkey)
+{
+    struct HybridEncrypted result = {0};
+
+    // Generate AES key
+    unsigned char *aes_key = generate_symmetric_key();
+    if (!aes_key)
+        return result;
+
+    // Encrypt data with AES
+    size_t ct_len = 0;
+    unsigned char *ciphertext = aes_encrypt_ecb(data, data_len, aes_key, &ct_len);
+    if (!ciphertext)
+    {
+        free(aes_key);
+        return result;
+    }
+
+    // Encrypt AES key with RSA
+    size_t enc_key_len = 0;
+    unsigned char *enc_key = rsa_encrypt(aes_key, AES_KEYLEN, rsa_pubkey, &enc_key_len);
+    free(aes_key);
+    if (!enc_key)
+    {
+        free(ciphertext);
+        return result;
+    }
+
+    // Hex encode both outputs
+    result.ciphertext_hex = hex_encode(ciphertext, ct_len);
+    result.enc_key_hex = hex_encode(enc_key, enc_key_len);
+
+    free(ciphertext);
+    free(enc_key);
+    return result;
+}
+
+struct HybridDecryptionResult hybrid_decrypt(const char *ciphertext_hex,
+                                             const char *enc_key_hex,
+                                             EVP_PKEY *rsa_privkey)
+{
+    struct HybridDecryptionResult result = {0};
+
+    size_t enc_key_len = 0, ct_len = 0;
+    unsigned char *enc_key = hex_decode(enc_key_hex, &enc_key_len);
+    unsigned char *ciphertext = hex_decode(ciphertext_hex, &ct_len);
+
+    if (!enc_key || !ciphertext)
+    {
+        free(enc_key);
+        free(ciphertext);
+        return result;
+    }
+
+    // Step 1: Decrypt AES key
+    size_t aes_len = 0;
+    unsigned char *aes_key = rsa_decrypt(enc_key, enc_key_len, rsa_privkey, &aes_len);
+    free(enc_key);
+    if (!aes_key || aes_len != 32)
+    { // must be AES-256
+        free(aes_key);
+        free(ciphertext);
+        return result;
+    }
+
+    // Step 2: Decrypt ciphertext
+    unsigned char *plaintext = aes_decrypt_ecb(ciphertext, ct_len, aes_key, &result.length);
+    free(aes_key);
+    free(ciphertext);
+    result.plaintext = plaintext;
+    return result;
+}
+
+// Concatenate into one string: enc_key_hex + ciphertext_hex
+char* hybrid_pack(const struct HybridEncrypted* enc)
+{
+    size_t total_len = strlen(enc->enc_key_hex) + strlen(enc->ciphertext_hex) + 1;
+    char* combined = malloc(total_len);
+    if (!combined) return NULL;
+
+    strcpy(combined, enc->enc_key_hex);
+    strcat(combined, enc->ciphertext_hex);
+    return combined;
+}
+
+void hybrid_unpack(const char* packed, char** out_enc_key_hex, char** out_ciphertext_hex)
+{
+    size_t rsa_hex_len = 384 * 2; // 3072-bit key = 384 bytes = 768 hex chars
+
+    *out_enc_key_hex = strndup(packed, rsa_hex_len);
+    *out_ciphertext_hex = strdup(packed + rsa_hex_len);
+}
+
+
+EVP_PKEY *load_public_key_from_pem(const char *pem_str)
+{
+    if (!pem_str)
+    {
+        fprintf(stderr, "Error: NULL PEM string provided.\n");
+        return NULL;
+    }
+
+    BIO *bio = BIO_new_mem_buf((void *)pem_str, -1); // -1 = null-terminated string
+    if (!bio)
+    {
+        fprintf(stderr, "Error: Failed to create BIO for PEM string.\n");
+        return NULL;
+    }
+
+    EVP_PKEY *pubkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+    if (!pubkey)
+    {
+        fprintf(stderr, "Error: Failed to read public key from PEM.\n");
+    }
+
+    BIO_free(bio);
+    return pubkey;
 }
 
 // Load an EVP_PKEY from a PEM file (public or private)
-EVP_PKEY* load_key_from_file(const char* filepath, int is_private)
+EVP_PKEY *load_key_from_file(const char *filepath, int is_private)
 {
     if (!filepath)
         return NULL;
 
-    FILE* fp = fopen(filepath, "r");
+    FILE *fp = fopen(filepath, "r");
     if (!fp)
     {
         perror("Error opening key file");
         return NULL;
     }
 
-    EVP_PKEY* key = NULL;
+    EVP_PKEY *key = NULL;
     if (is_private)
         key = PEM_read_PrivateKey(fp, NULL, NULL, NULL);
     else

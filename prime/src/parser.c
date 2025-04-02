@@ -179,6 +179,26 @@ char *serialize_yaml_config_to_string(const struct config *cfg, size_t *out_len)
     return yaml_str; // caller must free
 }
 
+struct config *load_yaml_config_from_string(const char *yaml_str, size_t yaml_len) {
+    if (!yaml_str || yaml_len == 0) {
+        fprintf(stderr, "Invalid YAML input string or length\n");
+        return NULL;
+    }
+
+    struct config *cfg = NULL;
+    cyaml_err_t err = cyaml_load_data(
+        (const unsigned char *)yaml_str, yaml_len,
+        &cyaml_config, &config_schema,
+        (void **)&cfg, NULL);
+
+    if (err != CYAML_OK) {
+        fprintf(stderr, "Error loading YAML from string: %s\n", cyaml_strerror(err));
+        return NULL;
+    }
+
+    return cfg;
+}
+
 void free_yaml_config(struct config **cfg)
 {
     if (cfg == NULL || *cfg == NULL)

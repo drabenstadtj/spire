@@ -72,7 +72,7 @@ DRIVER_OBJ = driver.o data_structs.o utility.o network.o pre_order.o \
 	reliable_broadcast.o view_change.o catchup.o proactive_recovery.o \
 	merkle.o recon.o tc_wrapper.o $(WRAPPER_OBJ)
 
-CM_OBJ=config_manager.o config_serialization.o parser.o key_generation.o data_structs.o utility.o network.o pre_order.o \
+CM_OBJ=config_manager.o parser.o key_generation.o data_structs.o utility.o network.o pre_order.o \
         util_dll.o packets.o nm_process.o process.o order.o \
         signature.o net_wrapper.o erasure.o validate.o suspect_leader.o \
         reliable_broadcast.o view_change.o catchup.o proactive_recovery.o \

@@ -75,6 +75,7 @@ struct config
 struct config *load_yaml_config(const char *yaml_file);
 int save_yaml_config(const char *yaml_file, struct config *cfg);
 char *serialize_yaml_config_to_string(const struct config *cfg, size_t *out_len);
+struct config *load_yaml_config_from_string(const char *yaml_str, size_t yaml_len);
 void free_yaml_config(struct config **cfg);
 
 // Function(s) for generating topology

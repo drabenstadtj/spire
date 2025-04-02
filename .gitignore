@@ -290,5 +290,5 @@ libiec61850/.install
 trip_master_v2/tm_keys
 trip_master/tm_keys
 
-prime/bin/tc_keys
+prime/bin/tc_keys/*
 prime/bin/tpm_keys
