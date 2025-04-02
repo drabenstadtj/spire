@@ -37,6 +37,19 @@ char *read_file_as_string(const char *filepath)
     return buffer;
 }
 
+// Helper to ensure a directory exists
+void ensure_directory(const char *path)
+{
+    struct stat st = {0};
+    if (stat(path, &st) == -1)
+    {
+        if (mkdir(path, 0755) < 0)
+        {
+            perror(path);
+        }
+    }
+}
+
 /**
  *	First pass: Generate a simulated TPM key for the host
  */
@@ -100,18 +113,6 @@ void generate_simulated_tpm_key_for_host(struct host *host)
 
 /* Second pass: Generate all keys using the permanent public key */
 
-// Helper to ensure a directory exists
-void ensure_directory(const char *path)
-{
-    struct stat st = {0};
-    if (stat(path, &st) == -1)
-    {
-        if (mkdir(path, 0755) < 0)
-        {
-            perror(path);
-        }
-    }
-}
 // Generate SM threshold key shares in tc_keys/sm/
 void generate_sm_tc_keys(int req_shares, int faults, int rej_servers)
 {

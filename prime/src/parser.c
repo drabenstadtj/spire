@@ -153,7 +153,7 @@ char *serialize_yaml_config_to_string(const struct config *cfg, size_t *out_len)
     if (!cfg || !out_len)
         return NULL;
 
-    unsigned char *yaml_data = NULL;
+    char *yaml_data = NULL;
     cyaml_err_t err = cyaml_save_data(
         &yaml_data, out_len, &cyaml_config, &config_schema, cfg, 0);
 
@@ -179,8 +179,10 @@ char *serialize_yaml_config_to_string(const struct config *cfg, size_t *out_len)
     return yaml_str; // caller must free
 }
 
-struct config *load_yaml_config_from_string(const char *yaml_str, size_t yaml_len) {
-    if (!yaml_str || yaml_len == 0) {
+struct config *load_yaml_config_from_string(const char *yaml_str, size_t yaml_len)
+{
+    if (!yaml_str || yaml_len == 0)
+    {
         fprintf(stderr, "Invalid YAML input string or length\n");
         return NULL;
     }
@@ -191,7 +193,8 @@ struct config *load_yaml_config_from_string(const char *yaml_str, size_t yaml_le
         &cyaml_config, &config_schema,
         (void **)&cfg, NULL);
 
-    if (err != CYAML_OK) {
+    if (err != CYAML_OK)
+    {
         fprintf(stderr, "Error loading YAML from string: %s\n", cyaml_strerror(err));
         return NULL;
     }
@@ -210,4 +213,3 @@ void free_yaml_config(struct config **cfg)
         fprintf(stderr, "Failed to free YAML data: %s\n", cyaml_strerror(err));
     }
 }
-
