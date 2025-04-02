@@ -39,7 +39,7 @@
 # 
 # 
 
-INC = -I../stdutil/include -I../libspread-util/include -I../libspread-util/src -I../../spines/libspines
+INC = -I../stdutil/include -I../libspread-util/include -I../libspread-util/src -I../../spines/libspines 
 STDUTIL_LIB = ../stdutil/lib/libstdutil.a
 LIBSPREAD_UTIL = ../libspread-util/src/libspread-util.a
 TC_LIB = ../OpenTC-1.1/TC-lib-1.0/.libs/libTC.a
@@ -72,7 +72,7 @@ DRIVER_OBJ = driver.o data_structs.o utility.o network.o pre_order.o \
 	reliable_broadcast.o view_change.o catchup.o proactive_recovery.o \
 	merkle.o recon.o tc_wrapper.o $(WRAPPER_OBJ)
 
-CM_OBJ=config_manager.o data_structs.o utility.o network.o pre_order.o \
+CM_OBJ=config_manager.o config_serialization.o parser.o key_generation.o data_structs.o utility.o network.o pre_order.o \
         util_dll.o packets.o nm_process.o process.o order.o \
         signature.o net_wrapper.o erasure.o validate.o suspect_leader.o \
         reliable_broadcast.o view_change.o catchup.o proactive_recovery.o \
@@ -115,7 +115,7 @@ driver: $(DRIVER_OBJ)
 	$(CC) $(LDFLAGS) -o ../bin/driver $(DRIVER_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lpthread -lrt
 
 config_manager:  $(CM_OBJ)
-	 $(CC) $(LDFLAGS) -o ../bin/config_manager $(CM_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lpthread -lrt
+	 $(CC) $(LDFLAGS) -o ../bin/config_manager $(CM_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lpthread -lrt -lcyaml
 
 config_agent:  $(CA_OBJ)
 	 $(CC) $(LDFLAGS) -o ../bin/config_agent $(CA_OBJ) $(STDUTIL_LIB) $(LIBSPREAD_UTIL) $(TC_LIB) $(SPINES_LIB) -lm -lcrypto -ldl -lpthread -lrt

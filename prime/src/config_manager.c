@@ -1,614 +1,454 @@
-/*
- * Spire.
- *
- * The contents of this file are subject to the Spire Open-Source
- * License, Version 1.0 (the ``License''); you may not use
- * this file except in compliance with the License.  You may obtain a
- * copy of the License at:
- *
- * http://www.dsn.jhu.edu/spire/LICENSE.txt
- *
- * or in the file ``LICENSE.txt'' found in this distribution.
- *
- * Software distributed under the License is distributed on an AS IS basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * Spire is developed at the Distributed Systems and Networks Lab,
- * Johns Hopkins University and the Resilient Systems and Societies Lab,
- * University of Pittsburgh.
- *
- * Creators:
- *   Yair Amir            yairamir@cs.jhu.edu
- *   Trevor Aron          taron1@cs.jhu.edu
- *   Amy Babay            babay@pitt.edu
- *   Thomas Tantillo      tantillo@cs.jhu.edu
- *   Sahiti Bommareddy    sahiti@cs.jhu.edu
- *   Maher Khan           maherkhan@pitt.edu
- *
- * Major Contributors:
- *   Marco Platania       Contributions to architecture design
- *   Daniel Qian          Contributions to Trip Master and IDS
- *
- * Contributors:
- *   Samuel Beckley       Contributions to HMIs
- *
- * Copyright (c) 2017-2023 Johns Hopkins University.
- * All rights reserved.
- *
- * Partial funding for Spire research was provided by the Defense Advanced
- * Research Projects Agency (DARPA), the Department of Defense (DoD), and the
- * Department of Energy (DoE).
- * Spire is not necessarily endorsed by DARPA, the DoD or the DoE.
- *
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <openssl/sha.h>
+#include <openssl/bn.h>
+#include "tc_wrapper.h"
+#include "config_serialization.h"
+#include "parser.h"
+#include "key_generation.h"
+
+#define TPM_KEY_DIR "tpm_keys/"
+#define SM_TC_DIR "tc_keys/sm/"
+#define PRIME_TC_DIR "tc_keys/prime/"
+
+// Helper to read the share files from TC_with_args_generate
+char *read_file_as_string(const char *filepath)
+{
+	FILE *fp = fopen(filepath, "r");
+	if (!fp)
+		return NULL;
+
+	fseek(fp, 0, SEEK_END);
+	long size = ftell(fp);
+	rewind(fp);
+
+	char *buffer = malloc(size + 1);
+	if (!buffer)
+	{
+		fclose(fp);
+		return NULL;
+	}
+
+	fread(buffer, 1, size, fp);
+	buffer[size] = '\0';
+	fclose(fp);
+	return buffer;
+}
+
+/**
+ *	First pass: Generate a simulated TPM key for the host
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <assert.h>
-#include <signal.h>
-#include <sys/un.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <arpa/inet.h>
-
-#include "packets.h"
-#include "openssl_rsa.h"
-#include "net_wrapper.h"
-#include "def.h"
-#include "data_structs.h"
-#include "tc_wrapper.h"
-
-#include "spu_alarm.h"
-#include "spu_events.h"
-#include "spu_memory.h"
-#include "spu_data_link.h"
-#include "spines_lib.h"
-
-#define KEY_PAYLOAD_MAXSIZE 40000 
-
-static const sp_time      Repeat_Timeout    = {1, 0};
-
-static int                Ctrl_Spines       = -1; /* Spines configuration/control network socket */
-static struct sockaddr_in Spines_Conf_Addr;
-
-static int32u             New_Global_Configuration_Number; /* Identifier for this new configuration */
-static signed_message    *Configuration_Message; /* The global configuration message to send */
-
-static int                Total_Key_Frags; /* Number of key fragments */
-static signed_message    *Key_Messages[10]; /* The Total_Key_Frags key messages to send */
-
-static char               Key_Buff[KEY_PAYLOAD_MAXSIZE]; /* Buffer used for building up key messages */
-static int32u             Curr_Idx; /* Used for tracking current location within Key_Buff */
-
-static int                Counter           = 0; /* Counts how many times I've broadcast a given configuration */
-
-char conf_dir[100];
-extern server_variables    VAR;
-
-void Usage(int argc, char **argv);
-void Init_CM_Network();
-void generate_keys(int curr_n, int curr_f, int curr_k, char * base_dir);
-void construct_keys_messages(int curr_server_count,char *based_dir); 
-void new_broadcast_configuration_message(int code, void *dummy);
-void repeat_broadcast_configuration_message(int code, void *dummy);
-void test_encrypt_decrypt();
-
-void construct_key_message();
-void read_pub_key(const char * filename,int type,int id);
-void read_pvt_key(const char * filename,int type,int id);
-
-void generate_keys(int curr_n, int curr_f, int curr_k, char * base_dir)
+void generate_simulated_tpm_key_for_host(struct host *host)
 {
-    char sm_keys_dir[100];
-    char prime_keys_dir[100];
-    struct stat st = {0};
-    int ret;
+	char private_key_filepath[512];
+	snprintf(private_key_filepath, sizeof(private_key_filepath), "%s%s_tpm_private.pem", TPM_KEY_DIR, host->name);
 
-    /* Set up SCADA Master (sm) and Prime key directory names */
-    memset(sm_keys_dir, 0, sizeof(sm_keys_dir));
-    memset(prime_keys_dir, 0, sizeof(prime_keys_dir));
+	ensure_directory(TPM_KEY_DIR);
 
-    sprintf(sm_keys_dir, "./%s/keys", base_dir);
-    sprintf(prime_keys_dir, "./%s/prime_keys", base_dir);
-    
-    /* If directories do not already exist, create them */
-    if (stat(sm_keys_dir, &st) == -1) {
-        ret = mkdir(sm_keys_dir, 0755);
-        if (ret < 0) Alarm(EXIT, "Error creating %s\n", sm_keys_dir);
-	}
-    if (stat(prime_keys_dir, &st) == -1) {
-        ret = mkdir(prime_keys_dir, 0755);
-        if (ret<0) Alarm(EXIT, "Error creating %s\n", prime_keys_dir);
-    }
+	// update permanent key location in config
+	host->permanent_key_location = strdup(private_key_filepath);
 
-    /* Generate keys */
-    TC_with_args_Generate(curr_f+1, sm_keys_dir, curr_f, curr_k, 1);
-    TC_with_args_Generate(curr_f+1, prime_keys_dir, curr_f, curr_k, 1);
-    OPENSSL_RSA_Generate_Keys_with_args(curr_n, prime_keys_dir);
-}
-
-void construct_key_message()
-{
-    signed_message *pkt_header;
-    key_msg_header *km_header;
-    char * new_keys; 
-        
-    Alarm(DEBUG,"construct_key_message called for Total_Key_Frags=%d\n",Total_Key_Frags);
-    Key_Messages[Total_Key_Frags] = (signed_message *) malloc(sizeof(signed_message)+sizeof(key_msg_header)+(Curr_Idx*sizeof(char)));
-    
-    //Fill main header
-    pkt_header = Key_Messages[Total_Key_Frags];
-    memset(pkt_header,0,sizeof(signed_message)+sizeof(key_msg_header)+(Curr_Idx*sizeof(char)));
-    pkt_header->machine_id = 0;
-    pkt_header->len = sizeof(key_msg_header)+Curr_Idx;
-    pkt_header->global_configuration_number = New_Global_Configuration_Number;
-    pkt_header->type=CONFIG_KEYS_MSG;
-
-    //Fill key header
-    km_header = (key_msg_header *)(pkt_header +1);
-    km_header->frag_idx = Total_Key_Frags+1;
-    //Copy keys
-    new_keys=(char*)(km_header+1);
-    memcpy(new_keys,Key_Buff, Curr_Idx*sizeof(char));
-    //sign
-    OPENSSL_RSA_Sign( ((byte*)pkt_header) + SIGNATURE_SIZE, sizeof(signed_message) + pkt_header->len - SIGNATURE_SIZE, (byte*)pkt_header);
-    
-    
-    //empty Key_Buff
-    memset(Key_Buff,0,KEY_PAYLOAD_MAXSIZE);
-    Curr_Idx = 0;
-    //inc Total_Key_Frags
-    Total_Key_Frags +=1;
-    Alarm(DEBUG,"Post construct_key_message now Total_Key_Frags=%d\n",Total_Key_Frags);
-}
-
-
-void read_pub_key(const char * filename, int type, int id){
-    FILE *fp;
-    int keysize = 0;
-    pub_key_header *pub_header;
-    
-    /* Open key file */
-    fp=fopen(filename,"r");
-    if(!fp){
-        Alarm(EXIT,"Error opening %s\n",filename);
-    }
-
-    /* Get key size */
-    keysize=getFileSize(filename);
-    Alarm(DEBUG, "%s keysize=%d\n",filename,keysize);
-
-    /* Key can't fit in current message we are constructing (it is "full"), so
-     * finalize and store the current message */
-    if (Curr_Idx+sizeof(pub_key_header)+keysize >= KEY_PAYLOAD_MAXSIZE) {
-        //Full
-        Alarm(DEBUG,"One key payload ready*****\n");
-        //create new msg and store
-        construct_key_message();
-        fflush(stdout);
-    }
-
-    /* Fill in public key header */
-    pub_header = (pub_key_header *)&Key_Buff[Curr_Idx];
-    pub_header->id= id;
-    pub_header->key_type = type;
-    pub_header->size=keysize;
-    Curr_Idx+=sizeof(pub_key_header);
-
-    /* Read public key into buffer */
-    fread(&Key_Buff[Curr_Idx], keysize,1,fp);
-    Curr_Idx += keysize;
-
-    fclose(fp);
-
-    Alarm(PRINT,"after pubkey Curr_Idx=%d, header=%d, keysize=%d\n",Curr_Idx,sizeof(pub_key_header),keysize);
-}
-
-void read_pvt_key(const char * filename,int type, int id){
-    FILE *fp;
-    char enc_key_filename[250];
-    int keysize,enc_key_size,key_parts,ret,rem_data_len = 0;
-    pvt_key_header *pvt_header;
-    char *enc_buff;
-    char *data_buff;
-    //Get enc key size, pvt key and cal parts to enc 
-    memset(enc_key_filename,0,sizeof(enc_key_filename));
-    if (type==PRIME_RSA_PVT){
-    	sprintf(enc_key_filename,"./tpm_keys/tpm_public%d.pem",id);
-    }
-    if(type==SM_TC_PVT || type == PRIME_TC_PVT){
-	sprintf(enc_key_filename,"./tpm_keys/tpm_public%d.pem",id+1);
-    }
-    enc_key_size = OPENSSL_RSA_Get_KeySize(enc_key_filename);
-    enc_buff= malloc(enc_key_size);
-    data_buff= malloc(enc_key_size);
-    fp=fopen(filename,"r");
-    if(!fp){
-        Alarm(EXIT,"Error opening %s\n",filename);
-    }
-    keysize=getFileSize(filename);
-    Alarm(DEBUG, "%s keysize=%d\n",filename,keysize);
-    rem_data_len=keysize;
-    key_parts = (int) keysize / enc_key_size ;
-    if(keysize % enc_key_size >0)
-        key_parts+=1;
-    
-    //Alarm(DEBUG, "%s keysize=%d, enc_key_size=%d, parts=%d\n",filename,keysize,enc_key_size,key_parts);
-      
-    //Make sure adding next key will not exceed desired packet size. If full handle
-    if(Curr_Idx+sizeof(pvt_key_header)+(key_parts*enc_key_size) >= KEY_PAYLOAD_MAXSIZE){
-    //Full
-        Alarm(DEBUG,"One key payload ready\n");
-        //create new msg and store
-        construct_key_message();
-	fflush(stdout);
-    }
-    //Construct pvt_key_header
-    pvt_header = (pvt_key_header *)&Key_Buff[Curr_Idx];
-    pvt_header->key_type = type;
-    pvt_header->id= id;
-    pvt_header->unenc_size= keysize;
-    pvt_header->pvt_key_parts=key_parts;
-    pvt_header->pvt_key_part_size=enc_key_size;
-    Curr_Idx+=sizeof(pvt_key_header);
-   /* 
-    fread(&Key_Buff[Curr_Idx], keysize,1,fp);
-   */
-    int data_len=0;
-    //Fill encrypted key chunks after header
-    for(int j=0; j<key_parts;j++){
-        memset(enc_buff,0,enc_key_size);
-        memset(data_buff,0,enc_key_size);
-        //read from file in chunks
-        //Alarm(DEBUG,"About to read from file rem_data_len=%d\n",rem_data_len);
-        if (rem_data_len >= enc_key_size){
-            ret=fread(data_buff,enc_key_size,1,fp);
-            rem_data_len-=enc_key_size;
-	    data_len=enc_key_size;
-        }
-        else{
-            ret=fread(data_buff,rem_data_len,1,fp);
-	    data_len=rem_data_len;;
-            rem_data_len-=rem_data_len;
-        }
-        //Alarm(DEBUG,"Read from file chunck =%d , rem_data_len=%d\n",ret,rem_data_len);
-        //encrypt the chunk and write
-        //OPENSSL_RSA_Encrypt(enc_key_filename,data_buff,data_len,enc_buff);
-        OPENSSL_RSA_Encrypt(enc_key_filename,data_buff,enc_key_size,enc_buff);
-        memcpy(&Key_Buff[Curr_Idx],enc_buff,enc_key_size);
-        //memcpy(&Key_Buff[Curr_Idx],data_buff,enc_key_size);
-        //inc Curr_Idx
-        Curr_Idx+=enc_key_size;
-    }
-    
-    fclose(fp);
-    Alarm(PRINT,"after %s pvtkey Curr_Idx=%d, header=%d, keysize=%d\n",filename,Curr_Idx,sizeof(pvt_key_header),key_parts*enc_key_size);
-    
-}
-
-void construct_keys_messages(int curr_server_count,char *base_dir)
-{
-    char filename[100];
-
-    /* Read all keys into Key_Buf, Creating and storing key fragments as they "fill up" */
-
-    //sm_tc_pub
-    memset(filename,0,sizeof(filename));
-    sprintf(filename, "./%s/keys/pubkey_1.pem", base_dir);
-    Alarm(PRINT,"start before sm_tc_pub Curr_Idx=%d\n",Curr_Idx);
-    read_pub_key(filename, SM_TC_PUB, 1);
-
-    //prime_tc_pub
-    memset(filename,0,sizeof(filename));
-    sprintf(filename, "./%s/prime_keys/pubkey_1.pem", base_dir);
-    Alarm(PRINT,"start before prime_tc_pub Curr_Idx=%d\n",Curr_Idx);
-    read_pub_key(filename, PRIME_TC_PUB, 1);
-
-    //prime_rsa_pub
-    for(int i=1; i<= curr_server_count; i++){
-    	Alarm(PRINT,"start before prime_rsa_pub Curr_Idx=%d\n",i);
-        memset(filename,0,sizeof(filename));
-        sprintf(filename, "./%s/prime_keys/public_%02d.key", base_dir, i);
-        read_pub_key(filename, PRIME_RSA_PUB, i);
-    } 
-
-    //sm_tc_shares
-    for(int i=0; i < curr_server_count; i++){
-    	Alarm(PRINT,"start before sm_tc_shares Curr_Idx=%d\n",i);
-        memset(filename,0,sizeof(filename));
-        sprintf(filename, "./%s/keys/share%d_1.pem", base_dir, i);
-        read_pvt_key(filename, SM_TC_PVT, i);
-    }
-
-    //prime_tc_shares
-    for(int i=0; i < curr_server_count; i++){
-    	Alarm(PRINT,"start before prime_tc_shares Curr_Idx=%d\n",i);
-        memset(filename,0,sizeof(filename));
-        sprintf(filename, "./%s/prime_keys/share%d_1.pem", base_dir, i);
-        read_pvt_key(filename, PRIME_TC_PVT, i);
-    }
-
-    //prime_rsa_pvt
-    for(int i=1; i <= curr_server_count; i++){
-    	Alarm(PRINT,"start before prime_rsa_pvt Curr_Idx=%d\n",i);
-        memset(filename,0,sizeof(filename));
-        sprintf(filename, "./%s/prime_keys/private_%02d.key", base_dir, i);
-        read_pvt_key(filename, PRIME_RSA_PVT, i);
-    }
-
-    /* "Flush" final key message (which may not be completely filled */
-    if (Curr_Idx>0) {
-        Alarm(DEBUG,"After key constructs , key+buff has content\n");
-        construct_key_message(); 
-    } 
-} 
-
-int main(int argc, char **argv)
-{
-    setlinebuf(stdout);
-    Alarm_set_types(PRINT);
-    //Alarm_set_types(STATUS|DEBUG);
-
-    Usage(argc,argv);
-
-    OPENSSL_RSA_Init();
-    OPENSSL_RSA_Read_Keys(0,RSA_CONFIG_MNGR,"./keys");
-
-    Init_CM_Network();
-
-    E_init();
-    E_queue(new_broadcast_configuration_message,NULL,NULL,Repeat_Timeout);
-
-    E_handle_events(); 
-}
-
-void Usage(int argc, char**argv)
-{
-    VAR.Num_Servers = (3*NUM_F) + (2*NUM_K) + 1;
-
-    if(argc <2){
-        Alarm(EXIT, "Usage: %s configuration_dir_path\n",argv[0]);
-    }
-
-    memset(conf_dir,0,100);
-    sprintf(conf_dir,"%s",argv[1]);
-}
-
-void Init_CM_Network()
-{
-    int ttl = 255;
-    struct hostent h_ent;
-
-    /* Create Spines socket */
-    Ctrl_Spines = Spines_Mcast_SendOnly_Sock(CONF_MNGR_ADDR, CONFIGUATION_SPINES_PORT, SPINES_PRIORITY);
-    if (Ctrl_Spines < 0 ) {
-        /* TODO try reconnecting? */
-        Alarm(EXIT, "Error setting up control spines network, exiting\n");
-    }
-
-    /* Initialize Spines multicast address */
-    memcpy(&h_ent, gethostbyname(CONF_SPINES_MCAST_ADDR), sizeof(h_ent));
-    memcpy(&Spines_Conf_Addr.sin_addr, h_ent.h_addr, sizeof(Spines_Conf_Addr.sin_addr));
-    
-    Spines_Conf_Addr.sin_family = AF_INET;
-    Spines_Conf_Addr.sin_port   = htons(CONF_SPINES_MCAST_PORT);
-    if(spines_setsockopt(Ctrl_Spines, 0, SPINES_IP_MULTICAST_TTL, &ttl, sizeof(ttl)) != 0) {
-        Alarm(EXIT, "Spines setsockopt error\n");
-    }
-
-    Alarm(PRINT,"MCAST set up done\n");
-}
-
-void new_broadcast_configuration_message(int code, void *dummy)
-{
-    nm_message *conf_msg;
-    char filename[200];
-    FILE * fp;
-    char * line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    char seps[]   = " ";
-    char *param;
-    char *value;
-    sp_time now;
-    
-    Total_Key_Frags = 0;
-    memset(Key_Buff, 0, KEY_PAYLOAD_MAXSIZE);
-    Curr_Idx=0;
-
-    Alarm(DEBUG,"New Config Msg\n");
-
-    /* Get global configuration number based on current time (limited to 1 reconf per sec) */
-    now = E_get_time();
-    New_Global_Configuration_Number = now.sec;
-
-    /* Allocate buffer for the new message: signed_message header + nm_message */
-    Configuration_Message=(signed_message *)malloc(sizeof(signed_message) + sizeof(nm_message));
-    memset(Configuration_Message, 0, sizeof(signed_message) + sizeof(nm_message)); 
-
-    /* Fill in signed message header */
-    Configuration_Message->machine_id = 0;
-    Configuration_Message->len = sizeof(nm_message);
-    Configuration_Message->type = CLIENT_OOB_CONFIG_MSG;
-    Configuration_Message->global_configuration_number = New_Global_Configuration_Number;
-
-    /**** Start filling in config_message by reading config defines from conf_dir/conf_def.txt ****/
-    conf_msg = (nm_message *)(Configuration_Message+1);
-
-    /* Open conf_def.txt file */
-    memset(filename,0,sizeof(filename));
-    sprintf(filename,"./%s/conf_def.txt",conf_dir);
-    fp = fopen(filename, "r");
-    if (!fp){
-        Alarm(EXIT, "Error opening %s\n",filename);
+	// Generate RSA key for TPM simulation
+	EVP_PKEY *tpm_key = generate_rsa_key(3072);
+	if (!tpm_key)
+	{
+		fprintf(stderr, "Error: Failed to generate simulated TPM key for host %s\n", host->name);
+		return;
 	}
 
-    /* Read each line of conf_def.txt file. Each line consists of a string
-     * identifying the parameter and an integer representing the parameter
-     * value (e.g. "N 6" sets number of servers N to 6) */
-    while ((read = getline(&line, &len, fp)) != -1)
-    {
-        Alarm(DEBUG,"read line is : %s", line);
-
-        /* Get param and value from line */
-        param = strtok(line, seps);
-        if (!param) Alarm(EXIT, "Invalid conf_def.txt format!");
-
-        value = strtok(NULL, seps);
-        if (!value) Alarm(EXIT, "Invalid conf_def.txt format!");
-
-        /* Fill in relevant conf message field based on param */
-        if (!strcmp(param,"N")){
-            conf_msg->N = atoi(value);
-            Alarm(DEBUG,"New N=%u\n",conf_msg->N);
-        }
-        if (!strcmp(param,"f"))
-            conf_msg->f = atoi(value);
-        if (!strcmp(param,"k"))
-            conf_msg->k = atoi(value);
-        if (!strcmp(param,"s"))
-            conf_msg->num_sites = atoi(value);
-        if (!strcmp(param,"c"))
-            conf_msg->num_cc = atoi(value);
-        if (!strcmp(param,"d"))
-            conf_msg->num_dc = atoi(value);
-        if (!strcmp(param,"cr"))
-            conf_msg->num_cc_replicas = atoi(value);
-        if (!strcmp(param,"dr"))
-            conf_msg->num_dc_replicas = atoi(value);
-    }
-    fclose(fp);
-    if (line) {
-        free(line);
-        line = NULL;
-    }
-
-    Alarm(DEBUG,"N=%u, f=%u, k=%u, s=%u\n",conf_msg->N,conf_msg->f,conf_msg->k,conf_msg->num_sites); 
-    /**** End filling in config_message by reading config defines from conf_dir/conf_def.txt ****/
-
-    /* Generate keys for the new configuration, based on parameters above and
-     * write them to files in conf_dir */
-    generate_keys(conf_msg->N, conf_msg->f, conf_msg->k, conf_dir);
-
-    /*Compose seperate conf_key_messages, sign and store them for repeat broadcast*/ 
-   
-    /* We will construct config_keys messages and fill the fragments count into config_message*/ 
-    construct_keys_messages(conf_msg->N, conf_dir); 
-	
-    conf_msg->frag_num = Total_Key_Frags; 
-
-    /**** Start Filling in IPs and Ports in config_message by reading from conf_dir/new_conf.txt file ****/
-    /* Open new_conf.txt file */
-    memset(filename,0,sizeof(filename));
-    sprintf(filename,"./%s/new_conf.txt",conf_dir);
-    Alarm(DEBUG,"Opening %s\n",filename);
-    fp = fopen(filename, "r");
-    if (fp == NULL){
-        Alarm(EXIT,"error opening new_conf file \n");
-    }
-
-    /* Read file with lines like: 
-     *     1 1 aster1 192.168.53.69 192.168.53.69 192.168.53.69 192.168.53.69 1
-     *     4 2 aster1 192.168.53.69 192.168.53.69 192.168.53.69 192.168.53.69 1
-     *
-     * Fields are:
-     *     TPM_ID   :    Permanent ID associated with replica TPM
-     *     Local_ID :    ID for this specific configuration (in the second example
-     *                   line, replica with TPM_ID 4 is acting as replica 2 in
-     *                   the new configuration). Local_IDs are typically the
-     *                   same as TPM_IDs in the original "maximal"
-     *                   configuration, but may change when reconfiguring to a
-     *                   smaller configuration
-     *     Machine_Name
-     *     Spines External IP
-     *     Spines Internal IP
-     *     SCADA Master IP
-     *     Prime IP
-     *     DC_CC_Flag :  1 == control center (CC), 0 == data center (DC)
-     */
-    len=0;
-    while ((read = getline(&line, &len, fp)) != -1)
-    {
-        /* Read data from file line */
-        const char* t_id      = strtok(line, " ");
-        int tpm_id_curr       = atoi(t_id);
-
-        const char* l_id      = strtok(NULL, " ");
-        int local_id_curr     = atoi(l_id);
-
-        const char* m_name    = strtok(NULL, " ");
-        const char* sp_ext_ip = strtok(NULL, " ");
-        const char* sp_int_ip = strtok(NULL, " ");
-        const char* sm_ip     = strtok(NULL, " ");
-        const char* prime_ip  = strtok(NULL, " ");
-        const char* flag      = strtok(NULL, " ");
-        int dc_cc_flag        = atoi(flag); /* 1 == control center (CC), 0 == data center (DC) */
-
-        /* Fill in message fields based on file data */
-        conf_msg->tpm_based_id[tpm_id_curr-1] = local_id_curr;
-        conf_msg->replica_flag[tpm_id_curr-1] = dc_cc_flag;
-        sprintf(conf_msg->sm_addresses[tpm_id_curr-1], "%s", sm_ip);
-        sprintf(conf_msg->spines_ext_addresses[tpm_id_curr-1], "%s", sp_ext_ip);
-        sprintf(conf_msg->spines_int_addresses[tpm_id_curr-1], "%s", sp_int_ip);
-        sprintf(conf_msg->prime_addresses[tpm_id_curr-1], "%s", prime_ip);
-
-        Alarm(PRINT, "t_id=%d , l_id=%d, sm_ip=%s\n", tpm_id_curr-1,
-              conf_msg->tpm_based_id[tpm_id_curr-1],
-              conf_msg->spines_ext_addresses[tpm_id_curr-1]);
-    }
-    conf_msg->spines_ext_port = SPINES_EXT_PORT;
-    conf_msg->spines_ext_port = SPINES_PORT;
-
-    fclose(fp);
-    if (line){
-        free(line);
-        line = NULL;
+	// Extract private key in PEM format (unencrypted)
+	char *tpm_private = get_private_key(tpm_key);
+	if (!tpm_private)
+	{
+		fprintf(stderr, "Error: Failed to extract TPM private key for host %s\n", host->name);
+		free_rsa_key(tpm_key);
+		return;
 	}
 
-    Alarm(DEBUG, "Composed Configuration Message of len=%u\n",Configuration_Message->len);
+	// Write private key to file
+	if (write_key_to_file(private_key_filepath, tpm_private) != 0)
+	{
+		fprintf(stderr, "Error: Failed to write TPM private key to %s\n", private_key_filepath);
+		free(tpm_private);
+		free_rsa_key(tpm_key);
+		return;
+	}
 
-    /* Sign message */
-    OPENSSL_RSA_Sign( ((byte*)Configuration_Message) + SIGNATURE_SIZE,
-                      sizeof(signed_message) + Configuration_Message->len - SIGNATURE_SIZE,
-                      (byte*)Configuration_Message );
-    
-    Alarm(DEBUG, "Composed Configuration Message of len=%u\n",Configuration_Message->len);
+	// Save the private key location in the config
+	host->permanent_key_location = strdup(private_key_filepath);
 
-    /* Send the message on the configuration network */
-    Counter = 0;
-    repeat_broadcast_configuration_message(0, NULL);
+	// Extract and store the public key in config after successfully writing private key*
+	char *tpm_public = get_public_key(tpm_key);
+	if (!tpm_public)
+	{
+		fprintf(stderr, "Error: Failed to extract TPM public key for host %s\n", host->name);
+		free(tpm_private);
+		free_rsa_key(tpm_key);
+		return;
+	}
+
+	// Set the field in the host to the public key
+	host->permanent_public_key = tpm_public;
+
+	// Cleanup
+	free(tpm_private);
+	free_rsa_key(tpm_key);
 }
 
-void repeat_broadcast_configuration_message(int code, void *dummy)
+/**
+ * Second pass: Generate all keys using the permanent public key
+ */
+
+// Helper to ensure a directory exists
+void ensure_directory(const char *path) {
+	struct stat st = {0};
+	if (stat(path, &st) == -1) {
+		if (mkdir(path, 0755) < 0) {
+			perror(path);
+		}
+	}
+}
+// Generate SM threshold key shares in tc_keys/sm/
+void generate_sm_tc_keys(int req_shares, int faults, int rej_servers)
 {
-    int ret = 0;
-    int num_bytes = 0;
+	ensure_directory("tc_keys");
+	ensure_directory("tc_keys/sm");
 
-    /* Broadcast config_message */
-    num_bytes = sizeof(signed_message)+Configuration_Message->len;
-    ret = spines_sendto(Ctrl_Spines, Configuration_Message, num_bytes, 0, (struct sockaddr *)&Spines_Conf_Addr, sizeof(struct sockaddr)); 
-    if(ret != num_bytes){
-        Alarm(EXIT,"Control manager: Spines sendto ret != message size\n");
-    }
-    Alarm(DEBUG,"$$$$Config Manager %d: sent conf message %d bytes to Spines_Conf_Addr addr=%s\n",Counter,num_bytes,inet_ntoa(Spines_Conf_Addr.sin_addr));
+	TC_with_args_Generate(req_shares, "tc_keys/sm", faults, rej_servers, 1);
+}
 
-    /* Broadcast Key_Messages */
-    for(int i = 0; i < Total_Key_Frags; i++){
-        num_bytes = sizeof(signed_message)+Key_Messages[i]->len;
+// Generate Prime threshold key shares in tc_keys/prime/
+void generate_prime_tc_keys(int req_shares, int faults, int rej_servers)
+{
+	ensure_directory("tc_keys");
+	ensure_directory("tc_keys/prime");
 
-        ret = spines_sendto(Ctrl_Spines, Key_Messages[i], num_bytes, 0, (struct sockaddr *)&Spines_Conf_Addr, sizeof(struct sockaddr)); 
-        if(ret!=num_bytes){
-            Alarm(EXIT,"****Control manager: Spines sendto ret != keys message size\n");
-        }
-        Alarm(DEBUG,"****Config Manager %d: sent key message %d bytes to Spines_Conf_Addr addr=%s\n",Counter,num_bytes,inet_ntoa(Spines_Conf_Addr.sin_addr));
-    }
+	TC_with_args_Generate(req_shares, "tc_keys/prime", faults, rej_servers, 1);
+}
 
-    Counter += 1;
-    
-    /* Schedule this function to be called again after Repeat_Timeout */
-    E_queue(repeat_broadcast_configuration_message, 0, NULL, Repeat_Timeout);
+// Loads threshold pubkeys from disk and
+void load_threshold_pubkeys(struct config *cfg)
+{
+	char sm_pubkey_path[256];
+	char prime_pubkey_path[256];
+
+	snprintf(sm_pubkey_path, sizeof(sm_pubkey_path), "%spubkey_1.pem", SM_TC_DIR);
+	snprintf(prime_pubkey_path, sizeof(prime_pubkey_path), "%spubkey_1.pem", PRIME_TC_DIR);
+
+	cfg->service_keys.sm_threshold_public_key = read_file_as_string(sm_pubkey_path);
+	cfg->service_keys.prime_threshold_public_key = read_file_as_string(prime_pubkey_path);
+
+	if (!cfg->service_keys.sm_threshold_public_key || !cfg->service_keys.prime_threshold_public_key)
+	{
+		fprintf(stderr, "Error: Failed to read SM or Prime threshold public keys.\n");
+		free_yaml_config(&cfg);
+		exit(EXIT_FAILURE);
+	}
+}
+
+// Generate necessary keys for host, encrypt them with the permanent public key, and add them to the data structure
+void generate_keys_for_host(struct host *host)
+{
+	if (!host->permanent_public_key)
+	{
+		fprintf(stderr, "Error: TPM public key missing for host %s\n", host->name);
+		return;
+	}
+
+	host->spines_internal_public_key = generate_and_get_public_key(2048);
+	host->encrypted_spines_internal_private_key = get_encrypted_private_key(
+		generate_rsa_key(2048), host->permanent_public_key);
+
+	host->spines_external_public_key = generate_and_get_public_key(2048);
+	host->encrypted_spines_external_private_key = get_encrypted_private_key(
+		generate_rsa_key(2048), host->permanent_public_key);
+}
+
+void generate_keys_for_replica(struct replica *replica, struct host *host, unsigned site_index)
+{
+	if (!host->permanent_public_key)
+	{
+		fprintf(stderr, "Error: TPM public key missing for host %s (replica %d)\n", host->name, replica->instance_id);
+		return;
+	}
+
+	// Generate instance key pair
+	replica->instance_public_key = generate_and_get_public_key(2048);
+	EVP_PKEY *instance_key = generate_rsa_key(2048);
+	replica->encrypted_instance_private_key = get_encrypted_private_key(instance_key, host->permanent_public_key);
+	free_rsa_key(instance_key);
+
+	// Paths to threshold share files
+	char prime_share_path[512];
+	snprintf(prime_share_path, sizeof(prime_share_path), PRIME_TC_DIR "share%d_1.pem", replica->instance_id - 1);
+
+	char sm_share_path[512];
+	snprintf(sm_share_path, sizeof(sm_share_path), SM_TC_DIR "share%d_1.pem", replica->instance_id - 1);
+
+	// Read PEM shares as strings
+	char *prime_plain = read_file_as_string(prime_share_path);
+	char *sm_plain = read_file_as_string(sm_share_path);
+
+	if (!prime_plain || !sm_plain)
+	{
+		fprintf(stderr, "Error: Failed to read threshold shares for replica %d\n", replica->instance_id);
+		free(prime_plain);
+		free(sm_plain);
+		return;
+	}
+
+	// Generate AES-256 key (32 random bytes)
+	unsigned char *aes_key = generate_symmetric_key();
+	if (!aes_key)
+	{
+		fprintf(stderr, "Error: Failed to generate AES key for replica %d\n", replica->instance_id);
+		free(prime_plain);
+		free(sm_plain);
+		return;
+	}
+
+	// Encrypt shares with AES-ECB and encode as hex
+	replica->encrypted_prime_threshold_key_share = aes_ecb_encrypt_hex(prime_plain, aes_key);
+	replica->encrypted_sm_threshold_key_share = aes_ecb_encrypt_hex(sm_plain, aes_key);
+
+	// Store or serialize `aes_key` later as you decide
+
+	free(prime_plain);
+	free(sm_plain);
+}
+
+// Find the host associated with a given replica
+struct host *find_host_for_replica(struct site *site, const char *host_name)
+{
+	for (unsigned j = 0; j < site->hosts_count; j++)
+	{
+		if (strcmp(site->hosts[j].name, host_name) == 0)
+		{
+			return &site->hosts[j];
+		}
+	}
+	return NULL; // No matching host found (shouldn't happen if the config is correct)
+}
+
+void first_pass_generate_tpm_keys(struct config *cfg)
+{
+	for (unsigned i = 0; i < cfg->sites_count; i++)
+	{
+		struct site *site = &cfg->sites[i];
+
+		for (unsigned j = 0; j < site->hosts_count; j++)
+		{
+			generate_simulated_tpm_key_for_host(&site->hosts[j]);
+		}
+	}
+}
+
+void second_pass_generate_keys(struct config *cfg)
+{
+	for (unsigned i = 0; i < cfg->sites_count; i++)
+	{
+		struct site *site = &cfg->sites[i];
+
+		for (unsigned j = 0; j < site->hosts_count; j++)
+		{
+			generate_keys_for_host(&site->hosts[j]);
+		}
+
+		for (unsigned j = 0; j < site->replicas_count; j++)
+		{
+			struct replica *replica = &site->replicas[j];
+			struct host *replica_host = find_host_for_replica(site, replica->host);
+
+			if (replica_host)
+			{
+				generate_keys_for_replica(replica, replica_host, i);
+			}
+			else
+			{
+				fprintf(stderr, "Error: Replica %d has no matching host %s!\n", replica->instance_id, replica->host);
+			}
+		}
+	}
+}
+
+struct config *load_and_process_config(const char *input_yaml)
+{
+	struct config *cfg = load_yaml_config(input_yaml);
+	if (!cfg)
+		return NULL;
+
+	first_pass_generate_tpm_keys(cfg);
+
+	int faults = cfg->tolerated_byzantine_faults;
+	int rej_servers = cfg->tolerated_unavailable_replicas;
+	int req_shares = faults + 1;
+
+	generate_sm_tc_keys(req_shares, faults, rej_servers);
+	generate_prime_tc_keys(req_shares, faults, rej_servers);
+	load_threshold_pubkeys(cfg);
+	second_pass_generate_keys(cfg);
+
+	return cfg;
+}
+
+// unsigned char *prepare_encrypted_config_payload(
+// 	struct config *cfg,
+// 	EVP_PKEY *cm_private_key,
+// 	EVP_PKEY *cm_public_key,
+// 	size_t *out_len)
+// {
+// 	size_t serialized_config_len = 0;
+// 	char *serialized_config = serialize_yaml_config_to_string(cfg, &serialized_config_len);
+// 	if (!serialized_config)
+// 		return NULL;
+
+// 	Signature sig = sign_buffer((unsigned char *)serialized_config, serialized_config_len, cm_private_key);
+// 	if (!sig.signature)
+// 	{
+// 		free(serialized_config);
+// 		return NULL;
+// 	}
+
+// 	unsigned char *sym_key = generate_symmetric_key();
+// 	unsigned char *iv = generate_iv();
+// 	if (!sym_key || !iv)
+// 	{
+// 		free(serialized_config);
+// 		free_signature(&sig);
+// 		return NULL;
+// 	}
+
+// 	unsigned char tag[AES_TAGLEN];
+// 	unsigned char *ciphertext = malloc(serialized_config_len + 32); // padded a bit bc of seg fault
+
+// 	int ct_len = aes_gcm_encrypt((unsigned char *)serialized_config, serialized_config_len,
+// 								 sym_key, iv, ciphertext, tag);
+// 	if (ct_len < 0)
+// 	{
+// 		free(serialized_config);
+// 		free_signature(&sig);
+// 		free(sym_key);
+// 		free(iv);
+// 		return NULL;
+// 	}
+
+// 	size_t enc_key_len = 0;
+// 	unsigned char *enc_sym_key = encrypt_symmetric_key_with_rsa(sym_key, AES_KEYLEN, cm_public_key, &enc_key_len);
+// 	if (!enc_sym_key)
+// 	{
+// 		free(serialized_config);
+// 		free_signature(&sig);
+// 		free(sym_key);
+// 		free(iv);
+// 		return NULL;
+// 	}
+
+// 	unsigned char *final_payload = serialize_config_message(
+// 		iv, AES_IVLEN, tag, AES_TAGLEN,
+// 		enc_sym_key, enc_key_len,
+// 		sig.signature, sig.length,
+// 		ciphertext, ct_len,
+// 		out_len);
+
+// 	free(serialized_config);
+// 	free_signature(&sig);
+// 	free(sym_key);
+// 	free(iv);
+// 	free(enc_sym_key);
+// 	free(ciphertext);
+// 	return final_payload;
+// }
+
+int load_config_manager_keys(EVP_PKEY **priv_key, EVP_PKEY **pub_key)
+{
+	*priv_key = load_key_from_file("cm_keys/private_key.pem", 1);
+	*pub_key = load_key_from_file("cm_keys/public_key.pem", 0);
+	return (*priv_key && *pub_key) ? 0 : -1;
+}
+
+int main(int argc, char *argv[])
+{
+	if (argc != 3)
+	{
+		fprintf(stderr, "Usage: %s <input_yaml> <output_yaml>\n", argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	struct config *cfg = load_and_process_config(argv[1]);
+	if (!cfg)
+	{
+		fprintf(stderr, "Failed to load or process config\n");
+		return EXIT_FAILURE;
+	}
+
+	EVP_PKEY *cm_priv = NULL, *cm_pub = NULL;
+	if (load_config_manager_keys(&cm_priv, &cm_pub) < 0)
+	{
+		fprintf(stderr, "Failed to load config manager keys\n");
+		free_yaml_config(&cfg);
+		return EXIT_FAILURE;
+	}
+
+	size_t payload_len = 0;
+
+	size_t serialized_config_len = 0;
+
+	char *serialized_config = serialize_yaml_config_to_string(cfg, &serialized_config_len);
+	if (!serialized_config)
+	{
+		fprintf(stderr, "Failed to serialize config\n");
+		free_yaml_config(&cfg);
+		EVP_PKEY_free(cm_priv);
+		EVP_PKEY_free(cm_pub);
+		return EXIT_FAILURE;
+	}
+
+	Signature sig = sign_buffer((unsigned char *)serialized_config, serialized_config_len, cm_priv);
+	if (!sig.signature)
+	{
+		fprintf(stderr, "Failed to sign configuration\n");
+		free(serialized_config);
+		free_yaml_config(&cfg);
+		EVP_PKEY_free(cm_priv);
+		EVP_PKEY_free(cm_pub);
+		return EXIT_FAILURE;
+	}
+
+	// Write signature + config to output file
+	FILE *out_fp = fopen(argv[2], "wb");
+	if (!out_fp)
+	{
+		perror("Failed to open output file");
+		free(serialized_config);
+		free_signature(&sig);
+		free_yaml_config(&cfg);
+		EVP_PKEY_free(cm_priv);
+		EVP_PKEY_free(cm_pub);
+		return EXIT_FAILURE;
+	}
+
+	// Signature length
+	uint32_t sig_len_u32 = (uint32_t)sig.length;
+	fwrite(&sig_len_u32, sizeof(uint32_t), 1, out_fp);
+
+	// Signature bytes
+	fwrite(sig.signature, 1, sig.length, out_fp);
+
+	// Config YAML string
+	fwrite(serialized_config, 1, serialized_config_len, out_fp);
+
+	fclose(out_fp);
+
+	// Cleanup
+	free(serialized_config);
+	free_signature(&sig);
+	free_yaml_config(&cfg);
+	EVP_PKEY_free(cm_priv);
+	EVP_PKEY_free(cm_pub);
+
+	return EXIT_SUCCESS;
 }

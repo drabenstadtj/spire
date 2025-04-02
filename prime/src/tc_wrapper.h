@@ -44,6 +44,9 @@
 
 //#include "data_structs.h"
 
+typedef uint8_t  byte;
+typedef uint32_t int32u;
+
 void TC_Read_Partial_Key( int32u server_no, int32u site_id,char *dir );
 void TC_Read_Public_Key(char *dir);
 
