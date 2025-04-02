@@ -1,0 +1,199 @@
+configuration_id: 1
+tolerated_byzantine_faults: 1
+tolerated_unavailable_replicas: 1
+
+service_keys:
+  sm_threshold_public_key: "XXXX"
+  prime_threshold_public_key: "XXXX"
+
+sites:
+  - name: control_center1
+    type: CONTROL_CENTER
+    hosts:
+      - name: goldenrod1
+        ip: 10.220.1.1
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private1.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod2
+        ip: 10.220.1.2
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private2.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod3
+        ip: 10.220.1.3
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private3.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod4
+        ip: 10.220.1.4
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private4.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod5
+        ip: 10.220.1.5
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private5.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod6
+        ip: 10.220.1.6
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private6.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+    replicas:
+      - instance_id: 1
+        host: goldenrod1
+        spines_internal_daemon: goldenrod1
+        spines_external_daemon: goldenrod1
+      - instance_id: 2
+        host: goldenrod2
+        spines_internal_daemon: goldenrod2
+        spines_external_daemon: goldenrod2
+      - instance_id: 3
+        host: goldenrod3
+        spines_internal_daemon: goldenrod3
+        spines_external_daemon: goldenrod3
+      - instance_id: 4
+        host: goldenrod4
+        spines_internal_daemon: goldenrod4
+        spines_external_daemon: goldenrod4
+      - instance_id: 5
+        host: goldenrod5
+        spines_internal_daemon: goldenrod5
+        spines_external_daemon: goldenrod5
+      - instance_id: 6
+        host: goldenrod6
+        spines_internal_daemon: goldenrod6
+        spines_external_daemon: goldenrod6
+
+  - name: control_center2
+    type: CONTROL_CENTER
+    hosts:
+      - name: goldenrod7
+        ip: 10.220.2.1
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private7.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod8
+        ip: 10.220.2.2
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private8.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod9
+        ip: 10.220.2.3
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private9.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod10
+        ip: 10.220.2.4
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private10.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod11
+        ip: 10.220.2.5
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private11.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod12
+        ip: 10.220.2.6
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private12.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+    replicas:
+      - instance_id: 7
+        host: goldenrod7
+        spines_internal_daemon: goldenrod7
+        spines_external_daemon: goldenrod7
+      - instance_id: 8
+        host: goldenrod8
+        spines_internal_daemon: goldenrod8
+        spines_external_daemon: goldenrod8
+      - instance_id: 9
+        host: goldenrod9
+        spines_internal_daemon: goldenrod9
+        spines_external_daemon: goldenrod9
+      - instance_id: 10
+        host: goldenrod10
+        spines_internal_daemon: goldenrod10
+        spines_external_daemon: goldenrod10
+      - instance_id: 11
+        host: goldenrod11
+        spines_internal_daemon: goldenrod11
+        spines_external_daemon: goldenrod11
+      - instance_id: 12
+        host: goldenrod12
+        spines_internal_daemon: goldenrod12
+        spines_external_daemon: goldenrod12
+
+  - name: control_center3
+    type: CONTROL_CENTER
+    hosts:
+      - name: goldenrod13
+        ip: 10.220.3.1
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private13.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod14
+        ip: 10.220.3.2
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private14.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod15
+        ip: 10.220.3.3
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private15.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod16
+        ip: 10.220.3.4
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private16.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod17
+        ip: 10.220.3.5
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private17.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+      - name: goldenrod18
+        ip: 10.220.3.6
+        permanent_key_location: "prime/bin/tpm_keys/tpm_private18.key"
+        runs_spines_internal: 1
+        runs_spines_external: 1
+    replicas:
+      - instance_id: 13
+        host: goldenrod13
+        spines_internal_daemon: goldenrod13
+        spines_external_daemon: goldenrod13
+      - instance_id: 14
+        host: goldenrod14
+        spines_internal_daemon: goldenrod14
+        spines_external_daemon: goldenrod14
+      - instance_id: 15
+        host: goldenrod15
+        spines_internal_daemon: goldenrod15
+        spines_external_daemon: goldenrod15
+      - instance_id: 16
+        host: goldenrod16
+        spines_internal_daemon: goldenrod16
+        spines_external_daemon: goldenrod16
+      - instance_id: 17
+        host: goldenrod17
+        spines_internal_daemon: goldenrod17
+        spines_external_daemon: goldenrod17
+      - instance_id: 18
+        host: goldenrod18
+        spines_internal_daemon: goldenrod18
+        spines_external_daemon: goldenrod18
+
+  - name: plc_site
+    type: CLIENT
+    hosts:
+      - name: goldenrod100
+        ip: 10.220.10.1
+        runs_spines_external: 1
+
+  - name: hmi_site
+    type: CLIENT
+    hosts:
+      - name: goldenrod101
+        ip: 10.220.11.1
+        runs_spines_external: 1
