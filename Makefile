@@ -49,13 +49,13 @@ include Makefile.general
 base_dir=.
 
 # .PHONY: all conf_spire substation core spines prime scada_master benchmark conf_core conf_scada_master libs openplc pvb iec clean_prime clean_libs clean_spire clean_substation clean
-.PHONY: all conf_spire substation core spines prime scada_master benchmark libs openplc pvb iec clean_prime clean_libs clean_spire clean_substation clean
+.PHONY: all conf_spire substation core spines prime scada_master benchmark libs \
+        openplc pvb iec clean_prime clean_libs clean_spire clean_substation \
+        clean clean_reconfiguration reconfiguration
 
 SUBDIRS=hmis proxy modbus dnp3 benchmark plcs
-
-SS_SUBDIRS= relay_emulator proxy_iec61850 benchmarks_ss trip_master_v2 trip_master
-
-RECONF_SUBDIRS = hmis proxy dnp3 benchmark 
+SS_SUBDIRS=relay_emulator proxy_iec61850 benchmarks_ss trip_master_v2 trip_master
+RECONF_SUBDIRS=hmis proxy dnp3 benchmark
 
 # Build full Spire system (note: need to build libs separately first)
 all: prime $(SUBDIRS)
@@ -64,28 +64,32 @@ all: prime $(SUBDIRS)
 	done
 	$(MAKE) -C scada_master spire
 
-# Build full Confidential Spire system (note: need to build libs separately first)
+# Build full Confidential Spire system
 conf_spire: prime $(SUBDIRS)
 	for dir in $(SUBDIRS); do \
     	( $(MAKE) -C $$dir); \
 	done
 	$(MAKE) -C scada_master conf_spire
 
-# Build Spire for the Substation (note: need to build libs separately first)
+# Build for Substation
 substation: prime $(SS_SUBDIRS)
 	for dir in $(SS_SUBDIRS); do \
     	( $(MAKE) -C $$dir); \
 	done
 
-# Build core of Spire system for benchmarking (without PLCs and HMIs)
-core: spines prime scada_master benchmark hmis proxy
+# Build core subset
+core: spines prime scada_master benchmark 
 
-reconfiguration: spines prime scada_master pvb $(RECONF_SUBDIRS)
+# Build only what's needed for reconfiguration
+reconfiguration: spines prime scada_master pvb reconfiguration_tools $(RECONF_SUBDIRS)
 	for dir in $(RECONF_SUBDIRS); do \
 		$(MAKE) -C $$dir; \
 	done
 
+reconfiguration_tools:
+	$(MAKE) -C reconfiguration
 
+# Individual component rules
 spines:
 	cd spines; ./configure; $(MAKE) -C daemon parser; $(MAKE)
 
@@ -98,13 +102,12 @@ scada_master:
 benchmark:
 	$(MAKE) -C benchmark
 
-# Build core of Confidential Spire system for benchmarking (without PLCs and HMIs)
 conf_core: spines prime conf_scada_master benchmark
 
 conf_scada_master:
 	$(MAKE) -C scada_master conf_spire
 
-# Build libraries needed for full Spire system (including all SCADA components)
+# Build supporting libs
 libs: openplc pvb iec spines
 
 openplc:
@@ -116,12 +119,15 @@ pvb:
 iec: 
 	cd libiec61850; $(MAKE); $(MAKE) install
 
-# Clean
+# Clean targets
 clean_prime:
 	$(MAKE) -C prime/src cleaner
 
+clean_reconfiguration:
+	$(MAKE) -C reconfiguration clean
+
 clean_libs: clean_prime
-	-$(MAKE) -C spines distclean # ignore errors, since this fails if clean is run multiple times
+	-$(MAKE) -C spines distclean
 	cd libiec61850; $(MAKE) clean; rm -rf .install
 
 clean_substation: 
@@ -135,4 +141,5 @@ clean_spire:
 	done
 	$(MAKE) -C scada_master clean
 
-clean: clean_libs clean_substation clean_spire
+# Full clean
+clean: clean_libs clean_substation clean_spire clean_reconfiguration
