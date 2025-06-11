@@ -467,12 +467,12 @@ void TC_Combine_Shares( byte *signature_dest, byte *digest )
      * which is not currently coded.*/
 
     ret = TC_verify(hash_bn, combined_signature, 
-		tc_public_key[1]);    
+		tc_public_key[1]);
     if (ret != 1){
         printf("TC_verify failed error code=%d!!\n",ret);
     	printf("Verified Combined Sig: %s\n", BN_bn2hex( combined_signature ));
-    	TC_PK_Print(tc_public_key[1]);
-	
+    	// TC_PK_Print(tc_public_key[1]);
+        
 	}
 		//tc_public_key[VAR.My_Site_ID]); //XXX: if want to use for multi-site, will need to change this
 

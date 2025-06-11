@@ -2,6 +2,7 @@
 
 SESSION="config_agents"
 
+
 # Start new tmux session
 tmux new-session -d -s $SESSION
 

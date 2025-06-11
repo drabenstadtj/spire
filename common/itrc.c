@@ -1727,7 +1727,7 @@ void ITRC_Insert_TC_ID(tc_share_msg *tcm, int32u sender, int32u flag)
     {
         ptr = tcq->tail;
         new_entry = 1;
-        //printf("Will insert after tail - ");
+        // printf("Will insert after tail - ");
     }
     /* else if (tcq->head.next != NULL && tcq->size < TC_HISTORY && seq < tcq->head.next->seq_num) {
         ptr = &tcq->head;
@@ -1743,13 +1743,13 @@ void ITRC_Insert_TC_ID(tc_share_msg *tcm, int32u sender, int32u flag)
             ptr = ptr->next;
         else {
             new_entry = 1;
-            //printf("Will insert in middle of queue - ");
+            // printf("Will insert in middle of queue - ");
         }
     }
 
     /* Create the new entry, if applicable */
     if (new_entry == 1) {
-        //printf("New TCQ: [%u, %u of %u]\n", o.ord_num, o.event_idx, o.event_tot);
+        printf("New TCQ: [%u, %u of %u]\n", o.ord_num, o.event_idx, o.event_tot);
 
         n = (tc_node *)malloc(sizeof(tc_node));
         memset(n, 0, sizeof(tc_node));
@@ -1800,7 +1800,7 @@ void ITRC_Insert_TC_ID(tc_share_msg *tcm, int32u sender, int32u flag)
     }
 
     memcpy(&ptr->shares[sender], tcm, sizeof(tc_share_msg));
-    //printf("sender=%d, count=%d, req shares=%d received_own=%d\n",sender,ptr->count,REQ_SHARES,ptr->recvd[My_ID]);
+    printf("sender=%d, count=%d, req shares=%d received_own=%d\n",sender,ptr->count,Curr_req_shares,ptr->recvd[My_ID]);
     if (ptr->count >= Curr_req_shares && ptr->recvd[My_ID] == 1) {
         /* TODO: actually compare and check digests, find culprit if the TC
          *      shares don't work out, report them, clear their share, wait

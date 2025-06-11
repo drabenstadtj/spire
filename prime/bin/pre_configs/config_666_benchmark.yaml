@@ -616,6 +616,11 @@ sites:
       '
     runs_spines_internal: 0
     runs_spines_external: 1
+  clients:
+  - client_id: 1
+    host: aster19
+    spines_external_daemon: aster19
+    type: benchmark    
 - name: benchmark_site
   type: CLIENT
   hosts:
@@ -647,8 +652,4 @@ sites:
       '
     runs_spines_internal: 0
     runs_spines_external: 1
-  clients:
-  - client_id: 1
-    host: aster20
-    spines_external_daemon: aster20
-    type: benchmark
+

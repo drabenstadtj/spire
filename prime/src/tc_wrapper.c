@@ -425,7 +425,7 @@ void TC_Combine_Shares( byte *signature_dest, byte *digest )
      * identify the malicious server that sent a message which caused
      * the arithmetic error. This is related to the blacklisting code,
      * which is not currently coded.*/
-
+    
     ret = TC_verify(hash_bn, combined_signature, 
 		tc_public_key[1]);    
     if (ret != 1)

@@ -1209,7 +1209,7 @@ void start_components_from_config(const struct config *cfg, const struct host *m
                         snprintf(cmd, sizeof(cmd), "cd ../../benchmark/ && ./benchmark %u 1000000 50 %s &",
                                  c->client_id, log_to_file ? "> ../prime/bin/logs/benchmark.log" : "");
 
-                    system(cmd);
+                    // system(cmd);
                 }
             }
         }

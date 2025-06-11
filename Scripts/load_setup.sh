@@ -18,6 +18,8 @@ SPINES_CONF="$SETUP_DIR/spines_ctrl.conf"
 SPINES_DEST="$DEST_DIR/spines/daemon"
 LATEST_CONF="$SETUP_DIR/latest.yaml"
 LATEST_DEST="$DEST_DIR/prime/bin/received_configs"
+DEF_FILE="$SETUP_DIR/def.h"
+DEF_DEST="$DEST_DIR/common"
 
 # Validate files exist
 if [ ! -f "$COMPOSE_FILE" ]; then
@@ -38,7 +40,9 @@ echo "Copying spines_ctrl.conf to $SPINES_DEST"
 mkdir -p "$SPINES_DEST"
 cp "$SPINES_CONF" "$SPINES_DEST/spines_ctrl.conf"
 
-echo "Copying latest.yaml to $LATEST_DEST"
-cp "$LATEST_CONF" "$LATEST_DEST/latest.yaml"
+# echo "Copying latest.yaml to $LATEST_DEST"
+# cp "$LATEST_CONF" "$LATEST_DEST/latest.yaml"
+
+cp "$DEF_FILE" "$DEF_DEST/def.h"
 
 echo "Setup complete."
