@@ -202,20 +202,17 @@ signed_message *PKT_Construct_TC_Final_Msg(ordinal o, tc_node *tcn)
         printf("TC_Final: too little shares (%u), required = %u\n", tcn->count, Curr_req_shares);
         return NULL;
     }
-    printf("PKT_Construct_TC_Final_Msg received enough shares: %i\n", Curr_req_shares);
 
     mess = PKT_Construct_Signed_Message(sizeof(tc_final_msg));
     mess->machine_id = My_ID;
     mess->len = sizeof(tc_final_msg);
     mess->type = TC_FINAL;
 
-    printf("PKT_Construct_TC_Final_Msg machine id: %u\n", mess->machine_id);
     tcf = (tc_final_msg *)(mess + 1);
     tcf->ord = o;
     memset(tcf->thresh_sig, 0, SIGNATURE_SIZE);
 
     TC_Initialize_Combine_Phase(Curr_num_SM + 1);
-    printf("PKT_Construct_TC_Final_Msg Curr_num_SM: %i\n", Curr_num_SM);
 
     copied_payload = 0;
     count = 0;

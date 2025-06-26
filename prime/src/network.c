@@ -823,14 +823,15 @@ void Net_Srv_Recv(channel sk, int source, void *dummy_p)
         Alarm(DEBUG, "Network: Got invalid mess type %d from client %d,size=%d\n", mess->type,mess->machine_id,received_bytes);
         return;
     }
-    Alarm(DEBUG, "MS2022: Network: Got valid mess type %d from client: %d\n", mess->type,mess->machine_id);
+    Alarm(DEBUG, "Network: Got mess type %s from client: %d, global configuration id: %u\n",  UTIL_Type_To_String(mess->type),mess->machine_id, mess->global_configuration_number);
     Alarm(DEBUG, "MS2022: Network: Got valid mess type from client: %s\n", UTIL_Type_To_String(mess->type));
+    
     
     /* Store the socket so we know how to send a response */
     /* if(NET.client_sd[mess->machine_id] == 0)
       NET.client_sd[mess->machine_id] = sk; */
   }
-
+  
   /* Function used to first decide whether or not we should even look at this message 
    * based on the state we are in (STARTUP, RESET, RECOVERY, NORMAL) */
   /*MS2022: DoS / Replay attack handling */
@@ -841,12 +842,14 @@ void Net_Srv_Recv(channel sk, int source, void *dummy_p)
     return;
   }
 
+  Alarm(DEBUG, "Got mess type %s of global configuration number %u from client: %d\n",  UTIL_Type_To_String(mess->type), mess->global_configuration_number,mess->machine_id);
   /* 1) Validate the Packet.  If the message does not validate, drop it. */
   if (!VAL_Validate_Message(mess, received_bytes)) {
     Alarm(PRINT, "VALIDATE FAILED for type %s from %u\n", 
             UTIL_Type_To_String(mess->type), mess->machine_id);
     return;
   }
+
 
   /* NEW - Process message both applies and (potentially) dispatches
    *    new messages as a result */

@@ -49,8 +49,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "tc_wrapper.h"
-#include "key_generation.h"
-#include "parser.h"
+#include "config_utils.h"
 
 #include "../OpenTC-1.1/TC-lib-1.0/TC.h" 
 
@@ -219,7 +218,7 @@ void TC_Read_Partial_Key_From_Config(int32u instance_id, struct config *cfg)
                 return;
             }
 
-            struct host *host = find_host_for_replica(site, rep->host);
+            struct host *host = find_host_by_name(cfg, rep->host);
             if (!host || !host->permanent_key_location) {
                 printf("Host %s not found or missing key location for replica %u\n", rep->host, instance_id);
                 return;
@@ -425,7 +424,7 @@ void TC_Combine_Shares( byte *signature_dest, byte *digest )
      * identify the malicious server that sent a message which caused
      * the arithmetic error. This is related to the blacklisting code,
      * which is not currently coded.*/
-    
+
     ret = TC_verify(hash_bn, combined_signature, 
 		tc_public_key[1]);    
     if (ret != 1)

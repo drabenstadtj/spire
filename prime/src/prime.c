@@ -296,6 +296,7 @@ void Usage(int argc, char **argv)
   }
   VAR.My_Server_ID = pending_server_id;
   DATA.NM.global_configuration_number = cfg->configuration_id;
+  Alarm(PRINT, "Loaded global configuration number: %u\n", DATA.NM.global_configuration_number);
 }
 
 void Print_Usage()

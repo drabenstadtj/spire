@@ -18,51 +18,56 @@ def start_spines(config_file, port, ip):
     cmd = ["./spines", "-c", config_file, "-p", str(port), "-I", ip]
     subprocess.Popen(cmd, cwd="/app/spire/spines/daemon")
 
-def start_scada_master(num):
-    cmd = ["./scada_master", str(num), str(num)]
-    subprocess.Popen(cmd, cwd="/app/spire/scada_master")
-
-def start_prime(num):
-    cmd = ["./prime", "-i", str(num), "-g", str(num)]
-    subprocess.Popen(cmd, cwd="/app/spire/prime/bin")
-    
 def start_plc():
     cmd = ["./openplc", "-m","502"]
     subprocess.Popen(cmd, cwd="/app/spire/plcs/pnnl_plc")
 
-def start_config_agent(num):
-    cmd = ["./config_agent", "-h", "goldenrod" + str(num)]
-    subprocess.Popen(cmd, cwd="/app/spire/prime/bin")
+# def start_config_agent(num):
+#     cmd = ["./config_agent", "-h", "goldenrod" + str(num)]
+#     subprocess.Popen(cmd, cwd="/app/spire/prime/bin")
 
 if __name__ == "__main__":
     
     hostname = get_hostname()
     ip = get_my_ip()
 
-    match = re.match(r"(goldenrod|aster)(\d+)$", hostname)
+    match = re.match(r"(aster|goldenrod)(\d+)$", hostname)
     if not match:
         print(f"Unrecognized hostname format: {hostname}")
         exit(1)
 
-    prefix = match.group(1)
+    prefix = match.group(1)  # "aster" or "goldenrod"
     num = int(match.group(2))
+    print(f"Matched prefix: {prefix}, number: {num}")
+    
+    # Determine which Spines config file to use
+    if prefix == "aster":
+        if 1 <= num <= 6:
+            config_file = "spines_ctrl_site_1.conf"
+        elif 7 <= num <= 12:
+            config_file = "spines_ctrl_site_2.conf"
+        elif 13 <= num <= 18:
+            config_file = "spines_ctrl_site_3.conf"
+        elif num == 19:
+            config_file = "spines_ctrl_site_4.conf"
+        elif num == 20:
+            config_file = "spines_ctrl_site_5.conf"
+        else:
+            print(f"Invalid aster number: {num}")
+            exit(1)
+    elif prefix == "goldenrod":
+        if 1 <= num <= 6:
+            config_file = "spines_ctrl_site_mcc.conf"
+        else:
+            print(f"Invalid goldenrod number: {num}")
+            exit(1)
+    else:
+        print(f"Unknown prefix: {prefix}")
+        exit(1)
+    
+    start_spines(config_file, 8200, ip)
 
-    if(not disabled):
-        # Always run control spines
-        start_spines("spines_ctrl.conf", 8200, ip)
-
-        if(not testing_config_agent):
-            if 1 <= num <= 4:
-                # Internal spines, Prime, and SCADA Master
-                start_spines("spines_int.conf", 8100, ip)
-                start_prime(num)
-                start_scada_master(num)
-
-            if 1 <= num <= 6:
-                # External spines
-                start_spines("spines_ext.conf", 8120, ip) 
-        
-    if num == 5:
+    if num == 19:
         start_plc()
 
     # Keep container alive

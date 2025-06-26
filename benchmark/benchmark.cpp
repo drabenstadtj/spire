@@ -177,7 +177,7 @@ void Process_Msg()
 
     ben = (benchmark_msg *)(mess + 1);
 
-    printf("PROCESSING BENCHMARK MSG [%d,%u]:\n", ben->sender, ben->seq.seq_num);
+    // printf("PROCESSING BENCHMARK MSG [%d,%u]:\n", ben->sender, ben->seq.seq_num);
 
     ping.tv_sec = ben->ping_sec;
     ping.tv_usec = ben->ping_usec;
